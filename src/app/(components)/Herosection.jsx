@@ -201,7 +201,7 @@ export default function HeroSectionWithSearch({ brands = [] }) {
                     <select
                       value={brand}
                       onChange={(e) => setBrand(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-[rgba(255,255,255,0.05)] px-3.5 py-3 text-sm text-white outline-none focus:border-[rgba(42,107,255,0.6)]"
+                      className="w-full appearance-none rounded-xl border border-white/10 bg-[rgba(255,255,255,0.05)] px-3.5 py-3 pr-10 text-sm text-white outline-none focus:border-[rgba(42,107,255,0.6)]"
                     >
                       <option value="ALL" className="bg-[#0a0f26] text-white">
                         Alle
@@ -230,7 +230,7 @@ export default function HeroSectionWithSearch({ brands = [] }) {
                     <select
                       value={maxPrice}
                       onChange={(e) => setMaxPrice(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-[rgba(255,255,255,0.05)] px-3.5 py-3 text-sm text-white outline-none focus:border-[rgba(42,107,255,0.6)]"
+                      className="w-full appearance-none rounded-xl border border-white/10 bg-[rgba(255,255,255,0.05)] px-3.5 py-3 pr-10 text-sm text-white outline-none focus:border-[rgba(42,107,255,0.6)]"
                     >
                       <option value="ANY" className="bg-[#0a0f26] text-white">
                         Beliebig
