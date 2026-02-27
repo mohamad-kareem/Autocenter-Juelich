@@ -1,42 +1,182 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import "tailwindcss";
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* =========================
+   AutoCenter Jülich Theme (Dark Blue)
+   - Consistent dark blue theme
+   - Homogeneous color palette
+   - Premium darker aesthetics
+   ========================= */
 
 html,
 body {
-  max-width: 100vw;
-  overflow-x: hidden;
+  height: 100%;
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* ---------- Theme tokens ---------- */
+:root {
+  /* Deep dark blues - more homogeneous */
+  --ac-bg-0: #040711; /* darkest base */
+  --ac-bg-1: #070a1a; /* slightly lighter */
+  --ac-bg-2: #0a0f26; /* blue tinted dark */
+  --ac-bg-3: #0d1432; /* for accents */
+
+  /* Text */
+  --ac-text: #f1f5ff;
+  --ac-muted: rgba(241, 245, 255, 0.7);
+  --ac-muted-2: rgba(241, 245, 255, 0.5);
+
+  /* Brand - darker blues */
+  --ac-blue: #1a5ae6; /* primary blue */
+  --ac-blue-light: #2a6bff; /* brighter for accents */
+  --ac-cyan: #2ac2e6; /* darker cyan */
+  --ac-cyan-light: #35ddff; /* for highlights */
+
+  /* Gradients */
+  --ac-gradient-primary: linear-gradient(135deg, #0d1f4d 0%, #1a5ae6 100%);
+  --ac-gradient-bg: linear-gradient(
+    135deg,
+    var(--ac-bg-0),
+    var(--ac-bg-1) 45%,
+    var(--ac-bg-2)
+  );
+
+  /* Glass/surfaces */
+  --ac-surface: rgba(10, 20, 45, 0.8);
+  --ac-surface-2: rgba(15, 25, 55, 0.9);
+
+  /* Borders */
+  --ac-border: rgba(42, 107, 255, 0.15);
+  --ac-border-2: rgba(26, 90, 230, 0.25);
+
+  /* Shadows */
+  --ac-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+  --ac-shadow-light: 0 8px 32px rgba(26, 90, 230, 0.15);
+
+  /* Focus ring */
+  --ac-ring: rgba(26, 90, 230, 0.3);
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+@layer base {
+  body {
+    background: var(--ac-bg-0);
+    color: var(--ac-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: rgba(26, 90, 230, 0.3);
+    color: white;
+  }
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+@layer utilities {
+  /* Hide scrollbars */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+  /* Global page background */
+  .ac-page {
+    background:
+      radial-gradient(
+        900px 520px at 15% 10%,
+        rgba(26, 90, 230, 0.12),
+        transparent 55%
+      ),
+      radial-gradient(
+        880px 540px at 85% 0%,
+        rgba(42, 194, 230, 0.08),
+        transparent 55%
+      ),
+      linear-gradient(
+        135deg,
+        var(--ac-bg-0),
+        var(--ac-bg-1) 45%,
+        var(--ac-bg-2)
+      );
+    min-height: 100vh;
+  }
+
+  /* Dark glass panel */
+  .ac-panel {
+    background: linear-gradient(
+      180deg,
+      rgba(13, 20, 50, 0.9),
+      rgba(7, 10, 26, 0.85)
+    );
+    border: 1px solid var(--ac-border);
+    box-shadow: var(--ac-shadow);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  /* Inputs / selects */
+  .ac-field {
+    border: 1px solid rgba(26, 90, 230, 0.2);
+    background: rgba(10, 20, 45, 0.6);
+    color: rgba(241, 245, 255, 0.95);
+    outline: none;
+    transition: all 0.2s ease;
+  }
+
+  .ac-field:focus {
+    border-color: var(--ac-blue);
+    background: rgba(13, 20, 50, 0.8);
+    box-shadow: 0 0 0 4px var(--ac-ring);
+  }
+
+  /* Buttons */
+  .ac-btn-primary {
+    background: linear-gradient(135deg, #1a5ae6 0%, #0d1f4d 100%);
+    color: white;
+    box-shadow:
+      0 14px 38px rgba(0, 0, 0, 0.4),
+      0 6px 18px rgba(26, 90, 230, 0.2);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ac-btn-primary:hover {
+    background: linear-gradient(135deg, #2a6bff 0%, #1a5ae6 100%);
+    box-shadow:
+      0 14px 38px rgba(0, 0, 0, 0.45),
+      0 6px 18px rgba(26, 90, 230, 0.25);
+    transform: translateY(-1px);
+  }
+
+  .ac-btn-primary:active {
+    transform: translateY(0);
+  }
+
+  .ac-btn-ghost {
+    border: 1px solid var(--ac-border);
+    background: rgba(26, 90, 230, 0.1);
+    color: white;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.2s ease;
+  }
+
+  .ac-btn-ghost:hover {
+    background: rgba(26, 90, 230, 0.2);
+    border-color: var(--ac-border-2);
+  }
+
+  /* Text gradients */
+  .ac-text-gradient {
+    background: linear-gradient(
+      135deg,
+      var(--ac-blue-light),
+      var(--ac-cyan-light)
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 }
