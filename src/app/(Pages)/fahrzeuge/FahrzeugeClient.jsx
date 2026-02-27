@@ -86,7 +86,7 @@ export default function FahrzeugeClient({ initialCars = [] }) {
   const brands = useMemo(() => {
     const set = new Set();
     for (const c of initialCars) {
-      const b = normalizeStr(c.brand || (c.title || "").split(" ")[0]);
+      const b = normalizeStr(c.brand);
       if (b) set.add(b);
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b, "de"));

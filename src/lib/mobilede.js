@@ -94,27 +94,24 @@ export async function fetchSingleAd(mobileAdId) {
  * (Adjust fields if your account returns slightly different shapes)
  */
 export function mapAdToUiCar(ad) {
-  const make = ad?.make || "";
-  const model = ad?.model || "";
-  const modelDescription = ad?.modelDescription || "";
-  const title = [make, model, modelDescription]
+  const make = String(ad?.make || "").trim(); // e.g. "OPEL"
+  const model = String(ad?.model || "").trim();
+  const modelDescription = String(ad?.modelDescription || "").trim();
+
+  const brand = make || "";
+
+  // cleaner title (usually: "OPEL Crossland Edition*wenig km*..."
+  const title = [make, modelDescription || model]
     .filter(Boolean)
     .join(" ")
     .trim();
 
-  // power is in kW in Seller API (docs). Your UI shows "PS".
+  // power is kW -> PS
   const powerKw = Number(ad?.power || 0);
   const powerPs = powerKw ? Math.round(powerKw * 1.35962) : null;
 
   const images = Array.isArray(ad?.images)
-    ? ad.images
-        .map((i) => i?.ref)
-        .filter(Boolean)
-        // optional: force a usable size rule
-        .map((ref) => {
-          // keep as-is; many refs already include ?rule=mo-640.jpg etc.
-          return ref;
-        })
+    ? ad.images.map((i) => i?.ref).filter(Boolean)
     : [];
 
   const price =
@@ -125,19 +122,20 @@ export function mapAdToUiCar(ad) {
     null;
 
   return {
-    id: String(ad?.mobileAdId),
+    id: String(ad?.mobileAdId || ""),
+    brand, // ✅ IMPORTANT: now Marke will always work
     title: title || `Anzeige ${ad?.mobileAdId}`,
     price: price ? Number(String(price).replace(",", ".")) : 0,
     year: ad?.firstRegistration
       ? String(ad.firstRegistration).slice(0, 4)
-      : null, // yyyyMM -> yyyy
+      : null,
     km: typeof ad?.mileage === "number" ? ad.mileage : null,
     fuel: ad?.fuel || null,
     gearbox: ad?.gearbox || null,
     power: powerPs,
-    location: "Jülich", // mobile API can have seller location; keep your branding or extend later
+    location: "Jülich",
     images: images.length ? images : ["/placeholder-car.jpg"],
-    isSold: Boolean(ad?.reserved) === true ? true : false, // adjust if you have a real "sold" flag elsewhere
+    isSold: Boolean(ad?.reserved) === true,
     raw: ad,
   };
 }
