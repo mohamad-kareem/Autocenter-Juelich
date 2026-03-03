@@ -94,7 +94,7 @@ export default function Footer() {
                       className="flex items-start gap-3 transition hover:text-[var(--ac-blue-light)]"
                     >
                       <Phone className="mt-0.5 h-4 w-4 text-[var(--ac-blue-light)]" />
-                      <span>+49 176 32445082</span>
+                      <span>+49 2461 9163780</span>
                     </a>
                   </li>
                   <li className="flex items-start gap-3">

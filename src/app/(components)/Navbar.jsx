@@ -98,9 +98,9 @@ export default function Navbar() {
                 <Phone className="h-4 w-4" />
                 <a
                   className="font-semibold hover:underline"
-                  href="tel:+49176 32445082"
+                  href="tel:+492461 9163780"
                 >
-                  0176 32445082
+                  02461 9163780
                 </a>
               </span>
             </div>
@@ -364,9 +364,9 @@ export default function Navbar() {
                         <a
                           className="font-extrabold"
                           style={{ color: "var(--ac-blue)" }}
-                          href="tel:+49176 32445082"
+                          href="tel:+492461 9163780"
                         >
-                          0176 32445082
+                          02461 9163780
                         </a>
                       </div>
 

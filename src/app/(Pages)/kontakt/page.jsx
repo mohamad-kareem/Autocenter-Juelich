@@ -200,7 +200,7 @@ export default function KontaktPage() {
                           name="phone"
                           type="tel"
                           className="ac-field w-full rounded-xl px-3.5 py-2.5 text-sm sm:text-base"
-                          placeholder="+49 176 32445082"
+                          placeholder="+49 2461 9163780"
                         />
                       </div>
 

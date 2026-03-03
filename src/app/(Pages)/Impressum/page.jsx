@@ -69,8 +69,8 @@ export default function ImpressumPage() {
                 />
                 <Row
                   label="Telefon"
-                  value="+49 176 32445082"
-                  href="tel:+4917632445082"
+                  value="+49 2461 9163780"
+                  href="tel:+49 2461 9163780"
                 />
                 <Row label="Umsatzsteuer-ID" value="DE 317574583" />
 

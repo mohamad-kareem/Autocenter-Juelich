@@ -506,10 +506,10 @@ export default async function CarDetailPage({ params }) {
                 <br className="hidden sm:block" />
                 Kontaktieren Sie uns gerne unter{" "}
                 <a
-                  href="tel:+492461234567"
+                  href="tel:+4924619163780"
                   className="text-[var(--accent)] hover:underline"
                 >
-                  02461 1234567
+                  02461 9163780
                 </a>
               </p>
             </div>
