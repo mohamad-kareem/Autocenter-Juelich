@@ -8,7 +8,7 @@ const ALLOWED_SUBJECTS = new Set([
   "Service-Termin vereinbaren",
 ]);
 
-// ✅ Where the contact emails should go
+// ✅ Receivers
 const CONTACT_TO = "info@autocenter-juelich.de";
 const CONTACT_CC = [
   "j.alawie@autocenter-juelich.de",
@@ -36,7 +36,6 @@ export async function POST(req) {
     }
 
     const subject = ALLOWED_SUBJECTS.has(subjectRaw) ? subjectRaw : "";
-
     if (!name || !email || !subject || !message) {
       return Response.json(
         { error: "Name, E-Mail, Betreff und Nachricht sind Pflicht." },
@@ -47,12 +46,11 @@ export async function POST(req) {
     // ---- SMTP env (UDAG / United Domains)
     const SMTP_HOST = process.env.SMTP_HOST || "smtps.udag.de";
     const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
-    const SMTP_SECURE_ENV =
-      String(process.env.SMTP_SECURE || "false") === "true";
-    const SMTP_USER = String(process.env.SMTP_USER || "").trim(); // info@autocenter-juelich.de
-    const SMTP_PASS = String(process.env.SMTP_PASS || "").trim(); // mailbox password
-    const SMTP_FROM =
-      process.env.SMTP_FROM || `AutoCenter Jülich <${SMTP_USER}>`;
+    const SMTP_USER = String(process.env.SMTP_USER || "").trim();
+    const SMTP_PASS = String(process.env.SMTP_PASS || "").trim();
+    const SMTP_FROM = (
+      process.env.SMTP_FROM || `AutoCenter Jülich <${SMTP_USER}>`
+    ).trim();
 
     if (!SMTP_USER || !SMTP_PASS) {
       return Response.json(
@@ -61,44 +59,56 @@ export async function POST(req) {
       );
     }
 
-    // ✅ Correct secure mode for common ports
-    const secure =
-      SMTP_PORT === 465 ? true : SMTP_PORT === 587 ? false : SMTP_SECURE_ENV;
+    // ✅ 465 = SSL/TLS, 587 = STARTTLS
+    const secure = SMTP_PORT === 465;
 
     const transporter = nodemailer.createTransport({
       host: SMTP_HOST,
       port: SMTP_PORT,
       secure,
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
-      },
-      // helps with many providers using STARTTLS/Certificates
-      tls: {
-        rejectUnauthorized: false,
-      },
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+
+      // ✅ helps with UDAG + Vercel TLS
+      ...(secure
+        ? {
+            tls: {
+              rejectUnauthorized: false,
+              minVersion: "TLSv1.2",
+              servername: SMTP_HOST,
+            },
+          }
+        : {
+            requireTLS: true,
+            tls: {
+              rejectUnauthorized: false,
+              minVersion: "TLSv1.2",
+              servername: SMTP_HOST,
+            },
+          }),
+
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000,
     });
 
-    // ---- build email
-    const safeName = escapeHtml(name);
-    const safeEmail = escapeHtml(email);
-    const safePhone = escapeHtml(phone);
-    const safeSubject = escapeHtml(subject);
-    const safeMessage = escapeHtml(message);
-
+    // ---- build email (safe)
     const html = `
       <div style="font-family:Arial,sans-serif;line-height:1.55;color:#0b1220">
         <h2 style="margin:0 0 10px 0">Neue Kontaktanfrage</h2>
         <div style="background:#f6f7fb;border:1px solid #e5e7ef;border-radius:12px;padding:14px 16px">
-          <p style="margin:6px 0"><b>Name:</b> ${safeName}</p>
-          <p style="margin:6px 0"><b>E-Mail:</b> ${safeEmail}</p>
-          ${phone ? `<p style="margin:6px 0"><b>Telefon:</b> ${safePhone}</p>` : ""}
-          <p style="margin:6px 0"><b>Betreff:</b> ${safeSubject}</p>
+          <p style="margin:6px 0"><b>Name:</b> ${escapeHtml(name)}</p>
+          <p style="margin:6px 0"><b>E-Mail:</b> ${escapeHtml(email)}</p>
+          ${
+            phone
+              ? `<p style="margin:6px 0"><b>Telefon:</b> ${escapeHtml(phone)}</p>`
+              : ""
+          }
+          <p style="margin:6px 0"><b>Betreff:</b> ${escapeHtml(subject)}</p>
         </div>
         <div style="margin-top:14px">
           <p style="margin:0 0 8px 0"><b>Nachricht:</b></p>
           <div style="white-space:pre-wrap;background:#ffffff;border:1px solid #e5e7ef;border-radius:12px;padding:14px 16px">
-            ${safeMessage}
+            ${escapeHtml(message)}
           </div>
         </div>
       </div>
@@ -121,7 +131,7 @@ export async function POST(req) {
       from: SMTP_FROM,
       to: CONTACT_TO,
       cc: CONTACT_CC,
-      replyTo: email,
+      replyTo: email, // so "Reply" goes to the customer
       subject: `Kontaktformular: ${subject}`,
       html,
       text,
@@ -129,6 +139,7 @@ export async function POST(req) {
 
     return Response.json({ ok: true });
   } catch (err) {
+    console.error("CONTACT_SMTP_ERROR:", err); // ✅ check Vercel Function logs
     return Response.json(
       { error: "Serverfehler beim Senden. Bitte später erneut versuchen." },
       { status: 500 },
