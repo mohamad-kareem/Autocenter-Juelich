@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 export default function KontaktPage() {
+  const formRef = useRef(null);
+
   const [loading, setLoading] = useState(false);
   const [ok, setOk] = useState(null);
   const [msg, setMsg] = useState("");
@@ -25,7 +27,6 @@ export default function KontaktPage() {
     return `https://www.google.com/maps/search/?api=1&query=${q}`;
   }, [address]);
 
-  // Google Maps embed without API key
   const embedSrc = useMemo(() => {
     const q = encodeURIComponent(address);
     return `https://www.google.com/maps?q=${q}&output=embed`;
@@ -36,7 +37,7 @@ export default function KontaktPage() {
     setOk(null);
     setMsg("");
 
-    const fd = new FormData(e.currentTarget);
+    const fd = new FormData(e.target); // ✅ safer than e.currentTarget
     const payload = {
       name: String(fd.get("name") || "").trim(),
       email: String(fd.get("email") || "").trim(),
@@ -70,14 +71,22 @@ export default function KontaktPage() {
     }
 
     setLoading(true);
+
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        cache: "no-store",
       });
 
-      const data = await res.json().catch(() => ({}));
+      const raw = await res.text();
+      let data = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        data = { raw };
+      }
 
       if (!res.ok) {
         setOk(false);
@@ -87,10 +96,13 @@ export default function KontaktPage() {
 
       setOk(true);
       setMsg("Danke! Ihre Nachricht wurde erfolgreich gesendet.");
-      e.currentTarget.reset();
-    } catch {
+
+      // ✅ FIX: use ref reset (no null crash)
+      formRef.current?.reset();
+    } catch (err) {
+      console.error("CONTACT_FETCH_ERROR:", err);
       setOk(false);
-      setMsg("Netzwerkfehler. Bitte erneut versuchen.");
+      setMsg(`Netzwerkfehler: ${err?.message || "Unbekannt"}`);
     } finally {
       setLoading(false);
     }
@@ -100,7 +112,7 @@ export default function KontaktPage() {
     <div className="ac-page">
       <div className="px-4 sm:px-6 lg:px-12 py-10 sm:py-12 lg:py-16">
         <div className="mx-auto w-full max-w-6xl">
-          {/* HERO (same style like GarantiePage) */}
+          {/* HERO */}
           <section className="relative">
             <div className="h-px w-full bg-gradient-to-r from-transparent via-white/15 to-transparent" />
 
@@ -123,7 +135,7 @@ export default function KontaktPage() {
           {/* MAIN */}
           <section className="mt-10 sm:mt-12">
             <div className="grid lg:grid-cols-2 gap-5 sm:gap-6 lg:gap-10">
-              {/* FORM PANEL (same surface vibe) */}
+              {/* FORM */}
               <div className="rounded-2xl border border-white/10 overflow-hidden">
                 <div className="p-5 sm:p-6 lg:p-8 bg-[rgba(10,20,45,0.35)]">
                   <div className="mb-5 sm:mb-6">
@@ -135,7 +147,11 @@ export default function KontaktPage() {
                     </p>
                   </div>
 
-                  <form className="space-y-4 sm:space-y-5" onSubmit={onSubmit}>
+                  <form
+                    ref={formRef}
+                    className="space-y-4 sm:space-y-5"
+                    onSubmit={onSubmit}
+                  >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="group space-y-1.5">
                         <label
@@ -282,7 +298,7 @@ export default function KontaktPage() {
                 </div>
               </div>
 
-              {/* MAP PANEL (same surface vibe) */}
+              {/* MAP */}
               <div className="rounded-2xl border border-white/10 overflow-hidden">
                 <div className="p-5 sm:p-6 lg:p-8 bg-[rgba(10,20,45,0.45)]">
                   <div className="flex items-start justify-between gap-3">

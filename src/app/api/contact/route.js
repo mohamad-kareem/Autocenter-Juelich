@@ -133,7 +133,7 @@ export async function POST(req) {
       to: CONTACT_TO,
       cc: CONTACT_CC,
       replyTo: email, // so "Reply" goes to the customer
-      subject: `Kontaktformular: ${subject}`,
+      subject: subject,
       html,
       text,
     });
