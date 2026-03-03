@@ -50,10 +50,7 @@ export async function fetchSellerAds() {
   }
 
   const data = await res.json();
-  console.log(
-    "MOBILE.DE ADS RESPONSE (first 2):",
-    JSON.stringify({ ...data, ads: (data?.ads || []).slice(0, 2) }, null, 2),
-  );
+
   return Array.isArray(data?.ads) ? data.ads : [];
 }
 

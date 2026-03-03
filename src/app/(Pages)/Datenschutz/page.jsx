@@ -42,7 +42,7 @@ export default function DatenschutzPage() {
 
               <div className="mt-4">
                 <Link
-                  href="/impressum"
+                  href="/Impressum"
                   className="text-sm font-semibold text-[var(--ac-blue-light)] hover:underline"
                 >
                   → Zum Impressum

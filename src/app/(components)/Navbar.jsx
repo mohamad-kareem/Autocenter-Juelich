@@ -60,7 +60,6 @@ export default function Navbar() {
         label: "Fahrzeuge",
         href: "/fahrzeuge",
         submenu: [
-          { label: "Neuwagen", href: "/fahrzeuge?typ=neuwagen" },
           { label: "Gebrauchtwagen", href: "/fahrzeuge?typ=gebrauchtwagen" },
         ],
       },
@@ -225,19 +224,6 @@ export default function Navbar() {
 
             {/* Desktop right */}
             <div className="hidden lg:flex items-center gap-4">
-              <div className="text-right leading-tight">
-                <div className="text-xs text-slate-600">Beratung & Verkauf</div>
-                <a
-                  className="text-sm font-extrabold text-slate-900"
-                  style={{
-                    color: scrolled ? "var(--ac-blue)" : "var(--ac-blue)",
-                  }}
-                  href="tel:+49176 32445082"
-                >
-                  176 32445082
-                </a>
-              </div>
-
               <Link
                 href="/kontakt"
                 className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition"

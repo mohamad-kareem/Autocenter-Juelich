@@ -40,7 +40,21 @@ function enumLabel(value, map) {
 
 function buildField(label, value) {
   if (!isNonEmpty(value)) return null;
-  return { label, value };
+  return { label, value: String(value) };
+}
+
+/**
+ * Keep titles short:
+ * "DACIA Sandero III Stepway*wenig km*Allwetter*Extras"
+ * -> "DACIA Sandero III Stepway"
+ */
+function firstWords(text, count = 4) {
+  const clean = String(text || "")
+    .replace(/\*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!clean) return "";
+  return clean.split(" ").slice(0, count).join(" ");
 }
 
 /**
@@ -49,29 +63,23 @@ function buildField(label, value) {
  * - "----": separator line
  * - "* item": bullet
  * - "**bold**": bold
- *
- * We render safe HTML-ish structure (no raw HTML injection).
  */
 function parseDescription(desc) {
   if (!desc || typeof desc !== "string") return [];
 
-  // Convert escaped linebreaks
   const text = desc.replaceAll("\\\\", "\n");
 
-  // Split into blocks by "----"
   const rawBlocks = text
     .split(/\n?----+\n?/g)
     .map((b) => b.trim())
     .filter(Boolean);
 
-  // For each block: detect bullets and inline bold
-  const blocks = rawBlocks.map((block) => {
+  return rawBlocks.map((block) => {
     const lines = block
       .split("\n")
       .map((l) => l.trim())
       .filter(Boolean);
 
-    // bullet lines: starts with "* "
     const bullets = [];
     const normalLines = [];
 
@@ -82,14 +90,12 @@ function parseDescription(desc) {
 
     return { normalLines, bullets };
   });
-
-  return blocks;
 }
 
 function renderInlineBold(text) {
-  // Split by **...**
   const parts = [];
   let i = 0;
+
   while (i < text.length) {
     const start = text.indexOf("**", i);
     if (start === -1) {
@@ -118,11 +124,17 @@ function renderInlineBold(text) {
   );
 }
 
-function SpecItem({ label, value }) {
+/* -----------------------------
+   Specs UI (LESS space, better)
+------------------------------ */
+
+function SpecRow({ label, value }) {
   return (
-    <div className="flex justify-between gap-6 py-3 border-b border-white/10">
-      <span className="text-[var(--ac-muted)] text-sm">{label}</span>
-      <span className="font-medium text-[var(--ac-text)] text-sm text-right">
+    <div className="grid grid-cols-[1fr_auto] items-baseline gap-4 py-2.5 border-b border-white/10 last:border-b-0">
+      <span className="text-[11px] sm:text-xs text-[var(--ac-muted)]">
+        {label}
+      </span>
+      <span className="text-[11px] sm:text-xs font-medium text-[var(--ac-text)] text-right">
         {value}
       </span>
     </div>
@@ -134,45 +146,26 @@ function SpecSection({ title, items }) {
   if (!clean.length) return null;
 
   return (
-    <div className="bg-[rgba(10,20,45,0.35)] border border-white/10 rounded-2xl p-6">
-      <h2 className="text-lg font-semibold text-[var(--ac-text)] mb-4">
-        {title}
-      </h2>
-      <div className="space-y-1">
+    <section className="rounded-2xl border border-white/10 bg-[rgba(10,20,45,0.35)] overflow-hidden">
+      <div className="px-4 sm:px-5 py-3 border-b border-white/10">
+        <h2 className="text-sm sm:text-base font-semibold text-[var(--ac-text)]">
+          {title}
+        </h2>
+      </div>
+      <div className="px-4 sm:px-5 py-1">
         {clean.map((it) => (
-          <SpecItem key={it.label} label={it.label} value={it.value} />
+          <SpecRow key={it.label} label={it.label} value={it.value} />
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
-export async function generateMetadata({ params }) {
-  const { id } = await params;
-  if (!id) return { title: "Fahrzeug nicht gefunden | AutoCenter Jülich" };
-
-  const ad = await fetchSingleAd(id);
-  if (!ad) return { title: "Fahrzeug nicht gefunden | AutoCenter Jülich" };
-
-  const title =
-    `${ad.make || ""} ${ad.modelDescription || ad.model || ""}`.trim();
-  const price = ad?.price?.consumerPriceGross
-    ? `${formatPrice(ad.price.consumerPriceGross)} €`
-    : null;
-
-  const descParts = [
-    ad.firstRegistration ? formatYYYYMM(ad.firstRegistration) : null,
-    ad.mileage != null ? `${formatKm(ad.mileage)} km` : null,
-    ad.fuel || null,
-    ad.power != null ? `${kwToPs(ad.power)} PS` : null,
-    price,
-  ].filter(Boolean);
-
-  return {
-    title: `${title || "Fahrzeug"} | AutoCenter Jülich`,
-    description: descParts.join(" · "),
-  };
-}
+/* ---------------------------------------
+   (Optional) If you still need SEO later,
+   keep generateMetadata somewhere else.
+   You asked "no IDs & meta", so removed.
+---------------------------------------- */
 
 export default async function CarDetailPage({ params }) {
   const { id } = await params;
@@ -181,14 +174,16 @@ export default async function CarDetailPage({ params }) {
   const ad = await fetchSingleAd(id);
   if (!ad) notFound();
 
-  // Images (refs)
+  // Images
   const images = Array.isArray(ad.images)
     ? ad.images.map((i) => i?.ref).filter(Boolean)
     : [];
 
-  // Title
-  const title =
-    `${ad.make || ""} ${ad.modelDescription || ad.model || ""}`.trim();
+  // Build a long title, then shorten to 4 words
+  const rawTitle = `${ad.make || ""} ${
+    ad.modelDescription || ad.model || ""
+  }`.trim();
+  const title = firstWords(rawTitle, 4) || rawTitle || "Fahrzeug";
 
   // Price
   const priceGross = ad?.price?.consumerPriceGross;
@@ -199,7 +194,7 @@ export default async function CarDetailPage({ params }) {
   const hu = formatYYYYMM(ad.generalInspection);
   const mileage = ad.mileage != null ? `${formatKm(ad.mileage)} km` : null;
 
-  // Enum maps (small + practical)
+  // Enum maps
   const gearboxMap = {
     MANUAL_GEAR: "Schaltung",
     AUTOMATIC_GEAR: "Automatik",
@@ -227,14 +222,12 @@ export default async function CarDetailPage({ params }) {
     ALL_WHEEL: "Allrad",
   };
 
-  // Build sections with ONLY existing fields
+  // Sections (NO IDs & Meta)
   const sectionVehicle = [
     buildField("Fahrzeugklasse", ad.vehicleClass),
     buildField("Kategorie", ad.category),
     buildField("Marke", ad.make),
     buildField("Modell", ad.model),
-    buildField("Modellbeschreibung", ad.modelDescription),
-    buildField("Zustand", ad.condition),
     buildField("Erstzulassung", firstReg),
     buildField("Kilometerstand", mileage),
     buildField("Sitze", ad.seats),
@@ -295,10 +288,9 @@ export default async function CarDetailPage({ params }) {
     buildField("Unfall/Schaden unrepariert", labelYesNo(ad.damageUnrepaired)),
     buildField("Fahrbereit", labelYesNo(ad.roadworthy)),
     buildField("Garantie", labelYesNo(ad.warranty)),
-    buildField("Inserat erneuert am", ad.renewalDate),
   ];
 
-  // Features: include only those that are true, plus non-empty arrays
+  // Features (compact)
   const featureBooleans = [
     ["ABS", ad.abs],
     ["ESP", ad.esp],
@@ -333,12 +325,8 @@ export default async function CarDetailPage({ params }) {
         ? ad.heating.join(", ")
         : null,
     ),
-    buildField(
-      "Steuerung / Tempomat",
-      ad.speedControl ? String(ad.speedControl) : null,
-    ),
-    buildField("Tagfahrlicht", ad.daytimeRunningLamps),
     buildField("Airbags", ad.airbag),
+    buildField("Tagfahrlicht", ad.daytimeRunningLamps),
   ];
 
   const sectionFeatures = [
@@ -358,22 +346,10 @@ export default async function CarDetailPage({ params }) {
     ),
   ];
 
-  const sectionIds = [
-    buildField("mobileAdId", ad.mobileAdId),
-    buildField("mobileSellerId", ad.mobileSellerId),
-    buildField("VIN/FIN", ad.vin),
-    buildField(
-      "KBA HSN/TSN",
-      ad?.kba?.hsn && ad?.kba?.tsn ? `${ad.kba.hsn} / ${ad.kba.tsn}` : null,
-    ),
-    buildField("Erstellt am", ad.creationDate),
-    buildField("Geändert am", ad.modificationDate),
-  ];
-
   // Description blocks
   const descBlocks = parseDescription(ad.description);
 
-  // Similar vehicles (optional)
+  // Similar vehicles
   let similar = [];
   try {
     const all = await fetchSellerAds();
@@ -384,12 +360,14 @@ export default async function CarDetailPage({ params }) {
         const imgs = Array.isArray(x.images)
           ? x.images.map((i) => i?.ref).filter(Boolean)
           : [];
-        const t =
-          `${x.make || ""} ${x.modelDescription || x.model || ""}`.trim();
+        const longT = `${x.make || ""} ${
+          x.modelDescription || x.model || ""
+        }`.trim();
+        const shortT = firstWords(longT, 4) || longT || "Fahrzeug";
         const p = x?.price?.consumerPriceGross || null;
         return {
           id: String(x.mobileAdId),
-          title: t || "Fahrzeug",
+          title: shortT,
           image: imgs[0] || "/placeholder-car.jpg",
           year: formatYYYYMM(x.firstRegistration),
           km: x.mileage,
@@ -403,80 +381,80 @@ export default async function CarDetailPage({ params }) {
 
   return (
     <div className="ac-page">
-      <div className="px-4 sm:px-6 lg:px-12 py-10 sm:py-12 lg:py-16">
+      <div className="px-4 sm:px-6 lg:px-12 py-6 sm:py-10 lg:py-14">
         <div className="mx-auto w-full max-w-7xl">
           {/* Breadcrumb */}
-          <div className="mb-8">
+          <div className="mb-5 sm:mb-8">
             <Link
               href="/fahrzeuge"
-              className="text-sm text-[var(--ac-muted)] hover:text-[var(--ac-text)] transition flex items-center gap-2"
+              className="text-xs sm:text-sm text-[var(--ac-muted)] hover:text-[var(--ac-text)] transition flex items-center gap-2"
             >
               <span>←</span>
               <span>Zurück zur Übersicht</span>
             </Link>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
+          <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
             {/* Images */}
             <div className="space-y-4">
               <ImageSlider images={images} alt={title || "Fahrzeug"} />
             </div>
 
             {/* Right Column */}
-            <div className="space-y-6">
+            <div className="space-y-5 sm:space-y-6">
               {/* Title + Price */}
               <div>
-                <h1 className="text-3xl sm:text-4xl font-bold text-[var(--ac-text)]">
-                  {title || "Fahrzeug"}
+                <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-[var(--ac-text)] leading-tight">
+                  {title}
                 </h1>
 
-                <div className="mt-4 flex flex-wrap items-baseline gap-3">
+                <div className="mt-3 flex flex-wrap items-baseline gap-2 sm:gap-3">
                   {priceText && (
-                    <span className="text-4xl font-light text-[var(--accent)]">
+                    <span className="text-2xl sm:text-4xl font-light text-[var(--accent)]">
                       {priceText}
                     </span>
                   )}
 
                   {ad.condition && (
-                    <span className="text-xs font-semibold text-white/80 bg-white/5 px-3 py-1 rounded-full border border-white/10">
+                    <span className="text-[11px] sm:text-xs font-semibold text-white/80 bg-white/5 px-3 py-1 rounded-full border border-white/10">
                       {ad.condition}
                     </span>
                   )}
 
                   {ad.warranty === true && (
-                    <span className="text-xs font-semibold text-emerald-300 bg-emerald-400/10 px-3 py-1 rounded-full border border-emerald-300/20">
+                    <span className="text-[11px] sm:text-xs font-semibold text-emerald-300 bg-emerald-400/10 px-3 py-1 rounded-full border border-emerald-300/20">
                       Garantie
                     </span>
                   )}
                 </div>
 
-                <div className="mt-3 text-sm text-[var(--ac-muted-2)]">
+                <div className="mt-2 text-[11px] sm:text-sm text-[var(--ac-muted-2)]">
                   {firstReg ? <span>Erstzulassung: {firstReg}</span> : null}
                   {mileage ? (
-                    <span className="ml-3">• Kilometer: {mileage}</span>
+                    <span className="ml-2 sm:ml-3">• Kilometer: {mileage}</span>
                   ) : null}
                 </div>
               </div>
 
-              {/* Quick Boxes */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-2">
-                {buildField("EZ", firstReg) ? (
+              {/* Quick Boxes (more compact on mobile) */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 pt-1">
+                {firstReg ? (
                   <div className="bg-[rgba(10,20,45,0.35)] border border-white/10 rounded-xl p-3 text-center">
-                    <span className="block text-xs text-[var(--ac-muted)]">
+                    <span className="block text-[10px] sm:text-xs text-[var(--ac-muted)]">
                       Erstzulassung
                     </span>
-                    <span className="text-lg font-semibold text-[var(--ac-text)]">
+                    <span className="text-sm sm:text-lg font-semibold text-[var(--ac-text)]">
                       {firstReg}
                     </span>
                   </div>
                 ) : null}
 
-                {buildField("KM", mileage) ? (
+                {mileage ? (
                   <div className="bg-[rgba(10,20,45,0.35)] border border-white/10 rounded-xl p-3 text-center">
-                    <span className="block text-xs text-[var(--ac-muted)]">
+                    <span className="block text-[10px] sm:text-xs text-[var(--ac-muted)]">
                       Kilometer
                     </span>
-                    <span className="text-lg font-semibold text-[var(--ac-text)]">
+                    <span className="text-sm sm:text-lg font-semibold text-[var(--ac-text)]">
                       {mileage}
                     </span>
                   </div>
@@ -484,21 +462,21 @@ export default async function CarDetailPage({ params }) {
 
                 {ad.power != null ? (
                   <div className="bg-[rgba(10,20,45,0.35)] border border-white/10 rounded-xl p-3 text-center">
-                    <span className="block text-xs text-[var(--ac-muted)]">
+                    <span className="block text-[10px] sm:text-xs text-[var(--ac-muted)]">
                       Leistung
                     </span>
-                    <span className="text-lg font-semibold text-[var(--ac-text)]">
+                    <span className="text-sm sm:text-lg font-semibold text-[var(--ac-text)]">
                       {ps ? `${ps} PS` : `${ad.power} kW`}
                     </span>
                   </div>
                 ) : null}
 
-                {buildField("HU", hu) ? (
+                {hu ? (
                   <div className="bg-[rgba(10,20,45,0.35)] border border-white/10 rounded-xl p-3 text-center">
-                    <span className="block text-xs text-[var(--ac-muted)]">
+                    <span className="block text-[10px] sm:text-xs text-[var(--ac-muted)]">
                       HU
                     </span>
-                    <span className="text-lg font-semibold text-[var(--ac-text)]">
+                    <span className="text-sm sm:text-lg font-semibold text-[var(--ac-text)]">
                       {hu}
                     </span>
                   </div>
@@ -507,17 +485,24 @@ export default async function CarDetailPage({ params }) {
 
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <button className="ac-btn-primary flex-1 py-4 rounded-xl font-semibold text-base">
+                <Link
+                  href="/kontakt"
+                  className="ac-btn-primary flex-1 py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base text-center"
+                >
                   Finanzierung anfragen
-                </button>
-                <button className="flex-1 border border-white/10 bg-white/5 py-4 rounded-xl font-semibold text-[var(--ac-text)] hover:bg-white/10 transition">
+                </Link>
+
+                <Link
+                  href="/kontakt"
+                  className="flex-1 border border-white/10 bg-white/5 py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base text-[var(--ac-text)] hover:bg-white/10 transition text-center"
+                >
                   Probefahrt vereinbaren
-                </button>
+                </Link>
               </div>
 
               {/* Contact Note */}
-              <p className="text-sm text-[var(--ac-muted-2)] text-center sm:text-left">
-                Haben Sie Fragen zu diesem Fahrzeug?{" "}
+              <p className="text-xs sm:text-sm text-[var(--ac-muted-2)] text-center sm:text-left leading-relaxed">
+                Haben Sie Fragen zu diesem Fahrzeug?
                 <br className="hidden sm:block" />
                 Kontaktieren Sie uns gerne unter{" "}
                 <a
@@ -530,8 +515,8 @@ export default async function CarDetailPage({ params }) {
             </div>
           </div>
 
-          {/* Specs sections */}
-          <div className="mt-12 grid gap-6 lg:grid-cols-2">
+          {/* Specs (LESS SPACE + nicer layout) */}
+          <div className="mt-10 sm:mt-12 grid gap-4 sm:gap-6 lg:grid-cols-2">
             <SpecSection title="Fahrzeug" items={sectionVehicle} />
             <SpecSection title="Motor & Antrieb" items={sectionEngine} />
             <SpecSection title="Verbrauch & Emissionen" items={sectionEnv} />
@@ -539,24 +524,23 @@ export default async function CarDetailPage({ params }) {
             <SpecSection title="Zustand & Service" items={sectionService} />
             <SpecSection title="Ausstattung" items={sectionFeatures} />
             <SpecSection title="Gewicht & Anhängelast" items={sectionTow} />
-            <SpecSection title="IDs & Meta" items={sectionIds} />
           </div>
 
           {/* Description */}
           {descBlocks.length > 0 && (
-            <div className="mt-12 border-t border-white/10 pt-8">
-              <h2 className="text-xl font-semibold text-[var(--ac-text)] mb-4">
+            <div className="mt-10 sm:mt-12 border-t border-white/10 pt-7 sm:pt-8">
+              <h2 className="text-base sm:text-xl font-semibold text-[var(--ac-text)] mb-4">
                 Beschreibung
               </h2>
 
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {descBlocks.map((b, idx) => (
                   <div
                     key={idx}
-                    className="rounded-2xl border border-white/10 bg-[rgba(10,20,45,0.35)] p-6"
+                    className="rounded-2xl border border-white/10 bg-[rgba(10,20,45,0.35)] p-4 sm:p-6"
                   >
                     {b.normalLines.length > 0 && (
-                      <div className="space-y-3 text-[var(--ac-muted-2)] leading-relaxed">
+                      <div className="space-y-2 sm:space-y-3 text-[11px] sm:text-sm text-[var(--ac-muted-2)] leading-relaxed">
                         {b.normalLines.map((line, i) => (
                           <p key={i}>{renderInlineBold(line)}</p>
                         ))}
@@ -564,7 +548,7 @@ export default async function CarDetailPage({ params }) {
                     )}
 
                     {b.bullets.length > 0 && (
-                      <ul className="mt-4 space-y-2 text-[var(--ac-muted-2)] list-disc pl-5">
+                      <ul className="mt-3 sm:mt-4 space-y-2 text-[11px] sm:text-sm text-[var(--ac-muted-2)] list-disc pl-5">
                         {b.bullets.map((li, i) => (
                           <li key={i}>{renderInlineBold(li)}</li>
                         ))}
@@ -578,12 +562,12 @@ export default async function CarDetailPage({ params }) {
 
           {/* Similar */}
           {similar.length > 0 && (
-            <div className="mt-16">
-              <h2 className="text-xl font-semibold text-[var(--ac-text)] mb-6">
+            <div className="mt-12 sm:mt-16">
+              <h2 className="text-base sm:text-xl font-semibold text-[var(--ac-text)] mb-4 sm:mb-6">
                 Ähnliche Fahrzeuge
               </h2>
 
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {similar.map((s) => (
                   <Link
                     key={s.id}
@@ -591,7 +575,6 @@ export default async function CarDetailPage({ params }) {
                     className="group rounded-2xl border border-white/10 overflow-hidden bg-[rgba(10,20,45,0.35)] hover:bg-[rgba(10,20,45,0.45)] transition"
                   >
                     <div className="relative aspect-[16/10]">
-                      {/* use next/image in your project - hostname already allowed */}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={s.image}
@@ -601,7 +584,7 @@ export default async function CarDetailPage({ params }) {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
                       {s.price != null && (
                         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                          <span className="text-sm font-bold text-white">
+                          <span className="text-xs sm:text-sm font-bold text-white">
                             {formatPrice(s.price)} €
                           </span>
                         </div>
@@ -609,10 +592,10 @@ export default async function CarDetailPage({ params }) {
                     </div>
 
                     <div className="p-4">
-                      <h3 className="text-sm font-semibold text-[var(--ac-text)] line-clamp-1">
+                      <h3 className="text-xs sm:text-sm font-semibold text-[var(--ac-text)] line-clamp-1">
                         {s.title}
                       </h3>
-                      <p className="text-xs text-[var(--ac-muted)] mt-1">
+                      <p className="text-[11px] sm:text-xs text-[var(--ac-muted)] mt-1">
                         {s.year || "-"} ·{" "}
                         {s.km != null ? `${formatKm(s.km)} km` : "-"} ·{" "}
                         {s.fuel || "-"}
