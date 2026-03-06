@@ -72,14 +72,14 @@ export default function HeroSectionWithSearch({ brands = [] }) {
   };
 
   return (
-    <section className="relative overflow-hidden pt-3 sm:pt-4">
-      {/* Shared glow only, no extra full section bg */}
+    <section className="relative overflow-hidden">
+      {/* Shared glow */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(circle_at_50%_0%,rgba(42,107,255,0.14),transparent_60%)]" />
       <div className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[42rem] -translate-x-1/2 rounded-full bg-[rgba(42,107,255,0.18)] blur-[90px]" />
 
-      <div className="mx-auto max-w-7xl px-4">
-        {/* HERO */}
-        <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[rgba(10,20,45,0.28)] shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
+      {/* HERO FULL WIDTH */}
+      <div className="w-full ">
+        <div className="relative overflow-hidden  border-white/10 bg-[rgba(10,20,45,0.28)] shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
           <div className="relative h-[24rem] sm:h-[27rem] md:h-[38rem] lg:h-[40rem]">
             {heroSlides.map((s, index) => (
               <div
@@ -169,110 +169,95 @@ export default function HeroSectionWithSearch({ brands = [] }) {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* SEARCH PANEL */}
-        <div className="relative z-20 -mt-10 px-2 sm:-mt-14 sm:px-4">
-          <div className="mx-auto max-w-6xl">
-            <div className="rounded-[1.6rem] border border-white/10 bg-[rgba(10,20,45,0.72)] backdrop-blur-xl shadow-[0_24px_60px_rgba(0,0,0,0.34)]">
-              <div className="p-4 sm:p-5 md:p-6">
+      {/* SEARCH PANEL */}
+      <div className="relative z-20 -mt-10 px-2 sm:-mt-14 sm:px-4">
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-[1.6rem] border border-white/10 bg-[rgba(10,20,45,0.72)] backdrop-blur-xl shadow-[0_24px_60px_rgba(0,0,0,0.34)]">
+            <div className="p-4 sm:p-5 md:p-6">
+              <div>
+                <h3 className="text-base sm:text-lg md:text-xl font-semibold text-white">
+                  Gebrauchtwagen finden
+                </h3>
+                <p className="mt-1 text-[11px] sm:text-xs text-white/50">
+                  Marke wählen, Budget festlegen und direkt zu den Ergebnissen
+                  wechseln.
+                </p>
+              </div>
+
+              <form
+                onSubmit={handleSearch}
+                className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3 items-end"
+              >
                 <div>
-                  <h3 className="text-base sm:text-lg md:text-xl font-semibold text-white">
-                    Gebrauchtwagen finden
-                  </h3>
-                  <p className="mt-1 text-[11px] sm:text-xs text-white/50">
-                    Marke wählen, Budget festlegen und direkt zu den Ergebnissen
-                    wechseln.
-                  </p>
+                  <label className="mb-1.5 block text-[11px] sm:text-xs font-medium text-white/60">
+                    Marke
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={brand}
+                      onChange={(e) => setBrand(e.target.value)}
+                      className="w-full appearance-none rounded-xl border border-white/10 bg-[rgba(255,255,255,0.05)] px-3.5 py-3 pr-10 text-sm text-white outline-none transition focus:border-[rgba(42,107,255,0.6)]"
+                    >
+                      <option value="ALL" className="bg-[#0a0f26] text-white">
+                        Alle
+                      </option>
+                      {brands.map((b) => (
+                        <option
+                          key={b}
+                          value={b}
+                          className="bg-[#0a0f26] text-white"
+                        >
+                          {b}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55" />
+                  </div>
                 </div>
 
-                <form
-                  onSubmit={handleSearch}
-                  className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3 items-end"
+                <div>
+                  <label className="mb-1.5 block text-[11px] sm:text-xs font-medium text-white/60">
+                    Budget bis
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={maxPrice}
+                      onChange={(e) => setMaxPrice(e.target.value)}
+                      className="w-full appearance-none rounded-xl border border-white/10 bg-[rgba(255,255,255,0.05)] px-3.5 py-3 pr-10 text-sm text-white outline-none transition focus:border-[rgba(42,107,255,0.6)]"
+                    >
+                      <option value="ANY" className="bg-[#0a0f26] text-white">
+                        Beliebig
+                      </option>
+                      <option value="3000" className="bg-[#0a0f26] text-white">
+                        3.000 €
+                      </option>
+                      <option value="5000" className="bg-[#0a0f26] text-white">
+                        5.000 €
+                      </option>
+                      <option value="10000" className="bg-[#0a0f26] text-white">
+                        10.000 €
+                      </option>
+                      <option value="15000" className="bg-[#0a0f26] text-white">
+                        15.000 €
+                      </option>
+                      <option value="20000" className="bg-[#0a0f26] text-white">
+                        20.000 €
+                      </option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55" />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="ac-btn-primary flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm sm:text-base font-semibold"
                 >
-                  <div>
-                    <label className="mb-1.5 block text-[11px] sm:text-xs font-medium text-white/60">
-                      Marke
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={brand}
-                        onChange={(e) => setBrand(e.target.value)}
-                        className="w-full appearance-none rounded-xl border border-white/10 bg-[rgba(255,255,255,0.05)] px-3.5 py-3 pr-10 text-sm text-white outline-none transition focus:border-[rgba(42,107,255,0.6)]"
-                      >
-                        <option value="ALL" className="bg-[#0a0f26] text-white">
-                          Alle
-                        </option>
-                        {brands.map((b) => (
-                          <option
-                            key={b}
-                            value={b}
-                            className="bg-[#0a0f26] text-white"
-                          >
-                            {b}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-[11px] sm:text-xs font-medium text-white/60">
-                      Budget bis
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={maxPrice}
-                        onChange={(e) => setMaxPrice(e.target.value)}
-                        className="w-full appearance-none rounded-xl border border-white/10 bg-[rgba(255,255,255,0.05)] px-3.5 py-3 pr-10 text-sm text-white outline-none transition focus:border-[rgba(42,107,255,0.6)]"
-                      >
-                        <option value="ANY" className="bg-[#0a0f26] text-white">
-                          Beliebig
-                        </option>
-                        <option
-                          value="3000"
-                          className="bg-[#0a0f26] text-white"
-                        >
-                          3.000 €
-                        </option>
-                        <option
-                          value="5000"
-                          className="bg-[#0a0f26] text-white"
-                        >
-                          5.000 €
-                        </option>
-                        <option
-                          value="10000"
-                          className="bg-[#0a0f26] text-white"
-                        >
-                          10.000 €
-                        </option>
-                        <option
-                          value="15000"
-                          className="bg-[#0a0f26] text-white"
-                        >
-                          15.000 €
-                        </option>
-                        <option
-                          value="20000"
-                          className="bg-[#0a0f26] text-white"
-                        >
-                          20.000 €
-                        </option>
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55" />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="ac-btn-primary flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm sm:text-base font-semibold"
-                  >
-                    <Search className="h-4 w-4 sm:h-5 sm:w-5" />
-                    <span>Suchen</span>
-                  </button>
-                </form>
-              </div>
+                  <Search className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span>Suchen</span>
+                </button>
+              </form>
             </div>
           </div>
         </div>
