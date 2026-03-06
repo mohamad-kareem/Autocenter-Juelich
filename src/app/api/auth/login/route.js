@@ -12,6 +12,8 @@ export async function POST(req) {
       .toLowerCase();
     const password = String(body.password || "").trim();
 
+    console.log("LOGIN_STEP: request parsed");
+
     if (!email || !password) {
       return NextResponse.json(
         { error: "Email and password are required." },
@@ -20,8 +22,10 @@ export async function POST(req) {
     }
 
     await dbConnect();
+    console.log("LOGIN_STEP: db connected");
 
     const user = await User.findOne({ email });
+    console.log("LOGIN_STEP: user lookup done", !!user);
 
     if (!user) {
       return NextResponse.json(
@@ -31,6 +35,7 @@ export async function POST(req) {
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
+    console.log("LOGIN_STEP: password compared", passwordMatch);
 
     if (!passwordMatch) {
       return NextResponse.json(
@@ -45,6 +50,7 @@ export async function POST(req) {
       role: user.role,
       name: user.name,
     });
+    console.log("LOGIN_STEP: token created");
 
     const response = NextResponse.json(
       {
@@ -61,17 +67,18 @@ export async function POST(req) {
 
     response.cookies.set("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
     });
 
+    console.log("LOGIN_STEP: cookie set");
     return response;
   } catch (error) {
-    console.error("LOGIN_ERROR:", error);
+    console.error("LOGIN_ERROR_FULL:", error);
     return NextResponse.json(
-      { error: "Something went wrong during login." },
+      { error: error?.message || "Something went wrong during login." },
       { status: 500 },
     );
   }

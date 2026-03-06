@@ -19,13 +19,6 @@ export default function Navbar() {
   const shouldHideNavbar = pathname.startsWith("/dashboard");
 
   useEffect(() => {
-    if (shouldHideNavbar) {
-      setIsMenuOpen(false);
-      setOpenMobileGroup(null);
-    }
-  }, [shouldHideNavbar]);
-
-  useEffect(() => {
     if (shouldHideNavbar) return;
 
     const handleMouseDown = (e) => {
