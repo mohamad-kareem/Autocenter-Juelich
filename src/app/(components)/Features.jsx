@@ -1,5 +1,5 @@
 "use client";
-
+import Link from "next/link";
 const items = [
   {
     title: "Individuelle Finanzierung",
@@ -82,12 +82,17 @@ export default function LandingFeaturesClean() {
         {/* CTA Section */}
         <div className="mt-20 text-center">
           <div className="ac-panel inline-block px-8 py-6 rounded-2xl">
-            <p className="text-lg text-[var(--ac-text)] mb-4">
+            <p className="mb-4 text-lg text-[var(--ac-text)]">
               Bereit für den nächsten Schritt?
             </p>
-            <button className="ac-btn-primary px-8 py-3 rounded-lg text-sm font-medium">
+
+            <Link
+              href="/kontakt"
+              className="ac-btn-primary inline-flex items-center justify-center px-8 py-3 rounded-lg text-sm font-medium"
+            >
               Jetzt Beratungstermin vereinbaren
-            </button>
+            </Link>
+
             <p className="mt-4 text-sm text-[var(--ac-muted-2)]">
               Kostenlose & unverbindliche Beratung
             </p>

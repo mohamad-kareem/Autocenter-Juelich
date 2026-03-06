@@ -125,7 +125,7 @@ export default function HeroSectionWithSearch({ brands = [] }) {
                         {s.subtitle}
                       </p>
 
-                      <p className="mt-4 max-w-xl text-xs sm:text-sm md:text-base leading-relaxed text-white/78">
+                      <p className="mt-4 hidden max-w-xl text-xs leading-relaxed text-white/78 sm:block sm:text-sm md:text-base">
                         {s.description}
                       </p>
 
@@ -181,8 +181,7 @@ export default function HeroSectionWithSearch({ brands = [] }) {
                   Gebrauchtwagen finden
                 </h3>
                 <p className="mt-1 text-[11px] sm:text-xs text-white/50">
-                  Marke wählen, Budget festlegen und direkt zu den Ergebnissen
-                  wechseln.
+                  Marke wählen, Budget festlegen.
                 </p>
               </div>
 
