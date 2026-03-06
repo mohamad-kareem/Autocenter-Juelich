@@ -1,6 +1,6 @@
-// app/page.jsx (Server Component)
 import HeroSectionWithSearch from "@/app/(components)/Herosection";
 import Features from "@/app/(components)/Features";
+import FeaturedCarsSlider from "@/app/(components)/FeaturedCarsSlider";
 import { fetchSellerAds, mapAdToUiCar } from "@/lib/mobilede";
 
 export default async function Home() {
@@ -15,6 +15,7 @@ export default async function Home() {
     <div className="min-h-screen ac-page">
       <HeroSectionWithSearch brands={brands} />
       <Features />
+      <FeaturedCarsSlider cars={cars} />
     </div>
   );
 }
