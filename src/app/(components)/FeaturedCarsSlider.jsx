@@ -205,12 +205,6 @@ export default function FeaturedCarsSlider({ cars = [] }) {
 
                     <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(4,7,17,0.95),rgba(4,7,17,0.18),transparent)]" />
 
-                    <div className="absolute left-4 top-4">
-                      <span className="rounded-full border border-white/10 bg-black/35 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white backdrop-blur-sm">
-                        AutoCenter Jülich
-                      </span>
-                    </div>
-
                     <div className="absolute bottom-4 left-4 right-4">
                       <div className="mb-2 text-2xl font-extrabold text-white">
                         {formatPrice(car.price)} €
@@ -219,10 +213,6 @@ export default function FeaturedCarsSlider({ cars = [] }) {
                       <h3 className="line-clamp-1 text-base sm:text-lg font-semibold text-white">
                         {title}
                       </h3>
-
-                      <p className="mt-1 text-xs text-white/75">
-                        {car.location || "Jülich"}
-                      </p>
                     </div>
                   </div>
 
