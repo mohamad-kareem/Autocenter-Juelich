@@ -1,58 +1,90 @@
-// components/Navbar.jsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ChevronDown, Menu, X, Phone, MapPin, Calendar } from "lucide-react";
 
-const cx = (...c) => c.filter(Boolean).join(" ");
+const cx = (...classes) => classes.filter(Boolean).join(" ");
 
 export default function Navbar() {
+  const pathname = usePathname();
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [openMobileGroup, setOpenMobileGroup] = useState(null);
 
   const navRef = useRef(null);
 
-  // Close mobile menu on outside click
+  const shouldHideNavbar = pathname.startsWith("/dashboard");
+
   useEffect(() => {
-    const onDown = (e) => {
+    if (shouldHideNavbar) {
+      setIsMenuOpen(false);
+      setOpenMobileGroup(null);
+    }
+  }, [shouldHideNavbar]);
+
+  useEffect(() => {
+    if (shouldHideNavbar) return;
+
+    const handleMouseDown = (e) => {
       if (!navRef.current) return;
       if (navRef.current.contains(e.target)) return;
+
       setIsMenuOpen(false);
       setOpenMobileGroup(null);
     };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, []);
 
-  // Close mobile menu on ESC
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown);
+    };
+  }, [shouldHideNavbar]);
+
   useEffect(() => {
-    const onKey = (e) => {
+    if (shouldHideNavbar) return;
+
+    const handleKeyDown = (e) => {
       if (e.key === "Escape") {
         setIsMenuOpen(false);
         setOpenMobileGroup(null);
       }
     };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, []);
 
-  // Prevent background scroll when mobile menu open
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [shouldHideNavbar]);
+
   useEffect(() => {
+    if (shouldHideNavbar) {
+      document.documentElement.style.overflow = "";
+      return;
+    }
+
     document.documentElement.style.overflow = isMenuOpen ? "hidden" : "";
+
     return () => {
       document.documentElement.style.overflow = "";
     };
-  }, [isMenuOpen]);
+  }, [isMenuOpen, shouldHideNavbar]);
 
-  // Scroll effect
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 10);
+    if (shouldHideNavbar) return;
+
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 10);
+    };
+
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [shouldHideNavbar]);
 
   const navItems = useMemo(
     () => [
@@ -60,25 +92,39 @@ export default function Navbar() {
         label: "Fahrzeuge",
         href: "/fahrzeuge",
         submenu: [
-          { label: "Gebrauchtwagen", href: "/fahrzeuge?typ=gebrauchtwagen" },
+          {
+            label: "Gebrauchtwagen",
+            href: "/fahrzeuge?typ=gebrauchtwagen",
+          },
         ],
       },
-      { label: "Garantie", href: "/garantie" },
-      { label: "Finanzierung", href: "/finanzierung" },
-      { label: "Kontakt", href: "/kontakt", submenu: [] },
+      {
+        label: "Garantie",
+        href: "/garantie",
+      },
+      {
+        label: "Finanzierung",
+        href: "/finanzierung",
+      },
+      {
+        label: "Kontakt",
+        href: "/kontakt",
+        submenu: [],
+      },
     ],
     [],
   );
 
   const toggleMobileGroup = (label) => {
-    setOpenMobileGroup((cur) => (cur === label ? null : label));
+    setOpenMobileGroup((current) => (current === label ? null : label));
   };
+
+  if (shouldHideNavbar) {
+    return null;
+  }
 
   return (
     <>
-      {/* =========================
-          TOP BAR (premium blue like hero)
-         ========================= */}
       <div
         className="text-white"
         style={{
@@ -93,12 +139,14 @@ export default function Navbar() {
                 <MapPin className="h-4 w-4" />
                 <span>Jülich</span>
               </span>
-              <span className="hidden md:inline text-white/60">•</span>
+
+              <span className="hidden text-white/60 md:inline">•</span>
+
               <span className="inline-flex items-center gap-2">
                 <Phone className="h-4 w-4" />
                 <a
+                  href="tel:+4924619163780"
                   className="font-semibold hover:underline"
-                  href="tel:+492461 9163780"
                 >
                   02461 9163780
                 </a>
@@ -106,7 +154,7 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center gap-2 text-white/90">
-              <span className="hidden lg:block font-semibold">
+              <span className="hidden font-semibold lg:block">
                 Nicht warten. Starten.
               </span>
             </div>
@@ -114,21 +162,17 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* =========================
-          MAIN NAV (light premium glass + hero blue)
-         ========================= */}
       <header
         ref={navRef}
         className={cx(
           "sticky top-0 z-[9999] isolate transition-all duration-300",
-          // Light glass always, just stronger when scrolled
           scrolled
             ? "backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.10)]"
             : "backdrop-blur-sm",
         )}
         style={{
           background: scrolled
-            ? "rgba(241,245,255,0.92)" // light gray premium
+            ? "rgba(241,245,255,0.92)"
             : "rgba(241,245,255,0.80)",
           borderBottom: scrolled
             ? "1px solid rgba(26,90,230,0.16)"
@@ -137,7 +181,6 @@ export default function Navbar() {
       >
         <nav className="mx-auto max-w-7xl px-4">
           <div className="flex h-16 items-center justify-between">
-            {/* Logo */}
             <Link href="/" className="flex items-center gap-3">
               <div className="leading-tight">
                 <div className="text-lg font-extrabold text-slate-900">
@@ -150,13 +193,12 @@ export default function Navbar() {
               </div>
             </Link>
 
-            {/* Desktop menu */}
-            <div className="hidden lg:flex items-center gap-1">
+            <div className="hidden items-center gap-1 lg:flex">
               {navItems.map((item) => {
-                const hasSub = item.submenu?.length > 0;
+                const hasSubmenu = item.submenu?.length > 0;
 
                 return (
-                  <div key={item.label} className="relative group">
+                  <div key={item.label} className="group relative">
                     <Link
                       href={item.href}
                       className={cx(
@@ -164,18 +206,16 @@ export default function Navbar() {
                         "text-slate-700 hover:text-slate-900",
                       )}
                       style={{
-                        // premium hover glow
                         background:
                           "linear-gradient(180deg, rgba(26,90,230,0.00), rgba(26,90,230,0.00))",
                       }}
                     >
                       <span>{item.label}</span>
-                      {hasSub && (
+                      {hasSubmenu && (
                         <ChevronDown className="h-4 w-4 transition group-hover:rotate-180" />
                       )}
                     </Link>
 
-                    {/* Hover highlight (hero blue, subtle) */}
                     <div
                       className="absolute inset-x-2 -bottom-1 h-[2px] scale-x-0 opacity-0 transition group-hover:scale-x-100 group-hover:opacity-100"
                       style={{
@@ -184,13 +224,12 @@ export default function Navbar() {
                       }}
                     />
 
-                    {/* Dropdown */}
-                    {hasSub && (
-                      <div className="absolute left-0 top-full pt-2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition">
+                    {hasSubmenu && (
+                      <div className="pointer-events-none absolute left-0 top-full pt-2 opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100">
                         <div
                           className="min-w-[240px] rounded-2xl p-2 shadow-[0_18px_45px_rgba(2,6,23,0.18)]"
                           style={{
-                            background: "rgba(248,250,252,0.98)", // light
+                            background: "rgba(248,250,252,0.98)",
                             border: "1px solid rgba(26,90,230,0.14)",
                             backdropFilter: "blur(10px)",
                           }}
@@ -201,15 +240,14 @@ export default function Navbar() {
                               href={sub.href}
                               className="block rounded-xl px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
                               style={{
-                                // blue text on hover
                                 WebkitTapHighlightColor: "transparent",
                               }}
-                              onMouseEnter={(e) =>
-                                (e.currentTarget.style.color = "var(--ac-blue)")
-                              }
-                              onMouseLeave={(e) =>
-                                (e.currentTarget.style.color = "")
-                              }
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.color = "var(--ac-blue)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.color = "";
+                              }}
                             >
                               {sub.label}
                             </Link>
@@ -222,8 +260,7 @@ export default function Navbar() {
               })}
             </div>
 
-            {/* Desktop right */}
-            <div className="hidden lg:flex items-center gap-4">
+            <div className="hidden items-center gap-4 lg:flex">
               <Link
                 href="/kontakt"
                 className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition"
@@ -239,12 +276,11 @@ export default function Navbar() {
               </Link>
             </div>
 
-            {/* Mobile menu button */}
             <button
               type="button"
-              className="lg:hidden inline-flex items-center justify-center rounded-xl px-3 py-2 transition"
               aria-label="Menü öffnen"
-              onClick={() => setIsMenuOpen((v) => !v)}
+              onClick={() => setIsMenuOpen((prev) => !prev)}
+              className="inline-flex items-center justify-center rounded-xl px-3 py-2 transition lg:hidden"
               style={{
                 background: "rgba(248,250,252,0.95)",
                 border: "1px solid rgba(26,90,230,0.18)",
@@ -261,9 +297,6 @@ export default function Navbar() {
           </div>
         </nav>
 
-        {/* =========================
-            MOBILE DRAWER (light + hero blue borders)
-           ========================= */}
         {isMenuOpen && (
           <div className="lg:hidden">
             <div className="mx-auto max-w-7xl px-4 pb-4">
@@ -278,10 +311,10 @@ export default function Navbar() {
               >
                 <div className="p-3">
                   {navItems.map((item) => {
-                    const hasSub = item.submenu?.length > 0;
-                    const open = openMobileGroup === item.label;
+                    const hasSubmenu = item.submenu?.length > 0;
+                    const isOpen = openMobileGroup === item.label;
 
-                    if (!hasSub) {
+                    if (!hasSubmenu) {
                       return (
                         <Link
                           key={item.label}
@@ -302,19 +335,19 @@ export default function Navbar() {
                         <button
                           type="button"
                           onClick={() => toggleMobileGroup(item.label)}
-                          className="w-full flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
+                          className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
                         >
                           <span>{item.label}</span>
                           <ChevronDown
                             className={cx(
                               "h-4 w-4 transition",
-                              open && "rotate-180",
+                              isOpen && "rotate-180",
                             )}
                             style={{ color: "var(--ac-blue)" }}
                           />
                         </button>
 
-                        {open && (
+                        {isOpen && (
                           <div className="px-2 pb-2">
                             <div
                               className="rounded-xl p-2"
@@ -332,13 +365,13 @@ export default function Navbar() {
                                     setOpenMobileGroup(null);
                                   }}
                                   className="block rounded-lg px-3 py-2 text-sm text-slate-700 transition hover:bg-white"
-                                  onMouseEnter={(e) =>
-                                    (e.currentTarget.style.color =
-                                      "var(--ac-blue)")
-                                  }
-                                  onMouseLeave={(e) =>
-                                    (e.currentTarget.style.color = "")
-                                  }
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.color =
+                                      "var(--ac-blue)";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.color = "";
+                                  }}
                                 >
                                   {sub.label}
                                 </Link>
@@ -350,7 +383,6 @@ export default function Navbar() {
                     );
                   })}
 
-                  {/* Mobile bottom row */}
                   <div
                     className="mt-3 rounded-xl p-3"
                     style={{
@@ -362,9 +394,9 @@ export default function Navbar() {
                       <div className="text-sm">
                         <div className="text-slate-600">Beratung & Verkauf</div>
                         <a
+                          href="tel:+4924619163780"
                           className="font-extrabold"
                           style={{ color: "var(--ac-blue)" }}
-                          href="tel:+492461 9163780"
                         >
                           02461 9163780
                         </a>
@@ -392,7 +424,6 @@ export default function Navbar() {
                 </div>
               </div>
 
-              {/* Background overlay */}
               <div
                 className="fixed inset-0 -z-10 bg-black/20"
                 onClick={() => {

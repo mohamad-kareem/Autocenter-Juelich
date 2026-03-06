@@ -1,12 +1,19 @@
 import Link from "next/link";
-import { Clock, Mail, Phone, MapPin, ChevronRight } from "lucide-react";
+import {
+  Clock,
+  Mail,
+  Phone,
+  MapPin,
+  ChevronRight,
+  User,
+  ShieldCheck,
+} from "lucide-react";
 
 export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
     <footer className="relative border-t border-white/10">
-      {/* keep the same structure (top line) but theme colors */}
       <div
         className="bg-[linear-gradient(135deg,var(--ac-bg-0),var(--ac-bg-1)_45%,var(--ac-bg-2))]"
         style={{ color: "var(--ac-text)" }}
@@ -24,10 +31,19 @@ export default function Footer() {
                 </span>
               </Link>
 
-              <p className="mt-4 text-sm leading-6 text-[var(--ac-muted)] max-w-sm">
+              <p className="mt-4 max-w-sm text-sm leading-6 text-[var(--ac-muted)]">
                 Ihr zuverlässiger Partner für hochwertige Fahrzeuge und
                 exzellenten Service.
               </p>
+
+              <Link
+                href="/login"
+                aria-label="Zum Login"
+                title="Login"
+                className="mt-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[var(--ac-blue-light)] transition hover:scale-105 hover:border-[var(--ac-blue)] hover:bg-white/10"
+              >
+                <ShieldCheck className="h-5 w-5" />
+              </Link>
             </section>
 
             {/* Öffnungszeiten */}
@@ -145,8 +161,7 @@ export default function Footer() {
             </section>
           </div>
 
-          {/* Bottom */}
-          <div className="mt-10 border-t border-white/10 pt-6 flex flex-col gap-2 text-xs text-[var(--ac-muted)] md:flex-row md:items-center md:justify-between">
+          <div className="mt-10 flex flex-col gap-2 border-t border-white/10 pt-6 text-xs text-[var(--ac-muted)] md:flex-row md:items-center md:justify-between">
             <p>
               © {year}{" "}
               <span className="font-semibold text-[var(--ac-text)]">
