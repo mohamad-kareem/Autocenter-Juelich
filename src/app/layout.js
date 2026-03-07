@@ -1,6 +1,7 @@
 import "./globals.css";
 import Navbar from "@/app/(components)/Navbar";
 import Footer from "@/app/(components)/Footer";
+import CookieBanner from "@/app/(components)/CookieBanner";
 
 export const metadata = {
   title: "AutoCenter Jülich",
@@ -14,6 +15,7 @@ export default function RootLayout({ children }) {
         <Navbar />
         <main className="min-h-[calc(100vh-180px)]">{children}</main>
         <Footer />
+        <CookieBanner />
       </body>
     </html>
   );
