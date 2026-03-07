@@ -101,7 +101,7 @@ export default function LandingFeaturesClean() {
 
         {/* Bottom Stats */}
         <div className="mt-20 pt-8 border-t border-[var(--ac-border)]">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="text-3xl font-bold text-[var(--ac-text)] mb-2">
                 14+
@@ -110,6 +110,7 @@ export default function LandingFeaturesClean() {
                 Jahre Erfahrung
               </div>
             </div>
+
             <div className="text-center">
               <div className="text-3xl font-bold text-[var(--ac-text)] mb-2">
                 500+
@@ -118,11 +119,7 @@ export default function LandingFeaturesClean() {
                 Zufriedene Kunden
               </div>
             </div>
-            <div className="text-center">
-              <div className="text-sm text-[var(--ac-muted)]">
-                Service Hotline
-              </div>
-            </div>
+
             <div className="text-center">
               <div className="text-3xl font-bold text-[var(--ac-text)] mb-2">
                 100%
