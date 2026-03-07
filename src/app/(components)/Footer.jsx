@@ -60,7 +60,7 @@ export default function Footer() {
                     <span className="font-semibold text-[var(--ac-text)]">
                       Mo–Fr:
                     </span>{" "}
-                    10:00 – 18:00 Uhr
+                    9:30 – 18:00 Uhr
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
@@ -69,7 +69,7 @@ export default function Footer() {
                     <span className="font-semibold text-[var(--ac-text)]">
                       Sa:
                     </span>{" "}
-                    10:00 – 15:00 Uhr
+                    9:30 – 15:00 Uhr
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
