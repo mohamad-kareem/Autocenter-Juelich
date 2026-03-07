@@ -119,9 +119,6 @@ export default function LandingFeaturesClean() {
               </div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-[var(--ac-text)] mb-2">
-                24/7
-              </div>
               <div className="text-sm text-[var(--ac-muted)]">
                 Service Hotline
               </div>
