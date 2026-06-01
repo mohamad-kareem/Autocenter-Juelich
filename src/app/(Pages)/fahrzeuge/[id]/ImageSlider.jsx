@@ -1,7 +1,23 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+
+const FALLBACK_IMAGE = "/placeholder-car.jpg";
+
+function isRemoteImage(src) {
+  return typeof src === "string" && /^https?:\/\//i.test(src);
+}
+
+function cleanImages(images) {
+  if (!Array.isArray(images)) return [];
+
+  const cleaned = images
+    .map((img) => (typeof img === "string" ? img.trim() : ""))
+    .filter(Boolean);
+
+  return Array.from(new Set(cleaned));
+}
 
 export default function ImageSlider({
   images = [],
@@ -9,78 +25,60 @@ export default function ImageSlider({
   thumbsCount = 6,
   className = "",
 }) {
-  const list = useMemo(() => {
-    const arr = Array.isArray(images) ? images : [];
-    // remove empty values + duplicates
-    const cleaned = arr
-      .map((v) => (typeof v === "string" ? v.trim() : ""))
-      .filter(Boolean);
-    return [...new Set(cleaned)];
-  }, [images]);
+  const list = useMemo(() => cleanImages(images), [images]);
 
   const [index, setIndex] = useState(0);
 
-  const safeIndex = list.length
-    ? Math.min(Math.max(index, 0), list.length - 1)
-    : 0;
-  const current = list[safeIndex] || "/placeholder-car.jpg";
+  const total = list.length;
+  const canSlide = total > 1;
+
+  const maxThumbs = Math.max(1, Number(thumbsCount) || 6);
+  const visibleThumbs = list.slice(0, maxThumbs);
+  const remainingThumbs = Math.max(total - maxThumbs, 0);
+
+  const safeIndex = total > 0 ? Math.min(Math.max(index, 0), total - 1) : 0;
+
+  const currentImage = total > 0 ? list[safeIndex] : FALLBACK_IMAGE;
 
   const goPrev = useCallback(() => {
-    if (list.length <= 1) return;
-    setIndex((i) => (i - 1 + list.length) % list.length);
-  }, [list.length]);
+    if (!canSlide) return;
+
+    setIndex((current) => {
+      const normalized = Math.min(Math.max(current, 0), total - 1);
+      return normalized === 0 ? total - 1 : normalized - 1;
+    });
+  }, [canSlide, total]);
 
   const goNext = useCallback(() => {
-    if (list.length <= 1) return;
-    setIndex((i) => (i + 1) % list.length);
-  }, [list.length]);
+    if (!canSlide) return;
 
-  const canSlide = list.length > 1;
-  const THUMBS = Math.max(1, Number(thumbsCount) || 6);
-
-  if (!list.length) {
-    return (
-      <div
-        className={[
-          "relative aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 bg-[rgba(10,20,45,0.35)]",
-          className,
-        ].join(" ")}
-      >
-        <Image
-          src="/placeholder-car.jpg"
-          alt={alt}
-          fill
-          className="object-cover"
-          sizes="(max-width: 1024px) 100vw, 50vw"
-          priority
-        />
-      </div>
-    );
-  }
+    setIndex((current) => {
+      const normalized = Math.min(Math.max(current, 0), total - 1);
+      return normalized === total - 1 ? 0 : normalized + 1;
+    });
+  }, [canSlide, total]);
 
   return (
-    <div className={["space-y-4", className].join(" ")}>
-      {/* Main */}
-      <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 bg-[rgba(10,20,45,0.35)]">
+    <div className={["space-y-4", className].filter(Boolean).join(" ")}>
+      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-[rgba(10,20,45,0.35)]">
         <Image
-          src={current}
+          src={currentImage}
           alt={alt}
           fill
+          unoptimized={isRemoteImage(currentImage)}
           className="object-cover"
           sizes="(max-width: 1024px) 100vw, 50vw"
-          priority
         />
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
 
-        {/* Controls */}
         {canSlide && (
           <>
             <button
               type="button"
               onClick={goPrev}
-              className="absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full border border-white/15 bg-black/40 backdrop-blur-sm text-white hover:bg-black/55 transition flex items-center justify-center"
               aria-label="Vorheriges Bild"
+              className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/55"
             >
               ←
             </button>
@@ -88,51 +86,51 @@ export default function ImageSlider({
             <button
               type="button"
               onClick={goNext}
-              className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full border border-white/15 bg-black/40 backdrop-blur-sm text-white hover:bg-black/55 transition flex items-center justify-center"
               aria-label="Nächstes Bild"
+              className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/55"
             >
               →
             </button>
 
             <div className="absolute bottom-3 right-3 rounded-full border border-white/15 bg-black/45 px-3 py-1 text-xs text-white/90 backdrop-blur-sm">
-              {safeIndex + 1} / {list.length}
+              {safeIndex + 1} / {total}
             </div>
           </>
         )}
       </div>
 
-      {/* Thumbnails (max 6) */}
       {canSlide && (
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-          {list.slice(0, THUMBS).map((src, i) => {
-            const active = i === safeIndex;
-            const remaining = list.length - THUMBS;
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          {visibleThumbs.map((src, thumbIndex) => {
+            const isActive = thumbIndex === safeIndex;
+            const isLastVisibleThumb = thumbIndex === visibleThumbs.length - 1;
+            const showMoreOverlay = isLastVisibleThumb && remainingThumbs > 0;
 
             return (
               <button
-                key={`${src}-${i}`}
+                key={`${src}-${thumbIndex}`}
                 type="button"
-                onClick={() => setIndex(i)}
+                onClick={() => setIndex(thumbIndex)}
+                aria-label={`Bild ${thumbIndex + 1}`}
                 className={[
-                  "relative aspect-[4/3] rounded-xl overflow-hidden border bg-[rgba(10,20,45,0.35)] transition",
-                  active
+                  "relative aspect-[4/3] overflow-hidden rounded-xl border bg-[rgba(10,20,45,0.35)] transition",
+                  isActive
                     ? "border-[var(--accent)]"
                     : "border-white/10 hover:border-white/25",
                 ].join(" ")}
-                aria-label={`Bild ${i + 1}`}
               >
                 <Image
                   src={src}
-                  alt={`${alt} - Bild ${i + 1}`}
+                  alt={`${alt} - Bild ${thumbIndex + 1}`}
                   fill
+                  unoptimized={isRemoteImage(src)}
                   className="object-cover"
                   sizes="(max-width: 640px) 33vw, (max-width: 1024px) 16vw, 10vw"
                 />
 
-                {/* +X overlay on last thumb if there are more */}
-                {i === THUMBS - 1 && remaining > 0 && (
-                  <div className="absolute inset-0 bg-black/55 flex items-center justify-center text-white font-semibold text-sm">
-                    +{remaining}
+                {showMoreOverlay && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/55 text-sm font-semibold text-white">
+                    +{remainingThumbs}
                   </div>
                 )}
               </button>

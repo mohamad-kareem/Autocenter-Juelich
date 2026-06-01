@@ -28,7 +28,9 @@ const GEARBOX_LABELS = {
 function normalizeStr(v) {
   return String(v || "").trim();
 }
-
+function isRemoteImage(src) {
+  return typeof src === "string" && /^https?:\/\//i.test(src);
+}
 function firstWords(text, count = 4) {
   const clean = normalizeStr(text)
     .replace(/\*/g, " ")
@@ -559,6 +561,7 @@ export default function FahrzeugeClient({ initialCars = [] }) {
                           src={img}
                           alt={titleShort}
                           fill
+                          unoptimized={isRemoteImage(img)}
                           className="object-cover transition duration-500 group-hover:scale-105"
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         />
