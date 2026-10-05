@@ -103,8 +103,13 @@ export default function DashboardNav({ role = "user", badges = {}, user }) {
       <div className={cx("flex h-14 shrink-0 items-center border-b border-line", mini ? "justify-center" : "gap-2 pl-4 pr-2")}>
         {!mini ? (
           <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-ink text-[11px] font-bold tracking-wide text-white">
-              AC
+            {/* brand mark drawn in CSS (crisp at any size): navy tile, serif AC, blue line */}
+            <span
+              aria-hidden
+              className="flex h-[30px] w-[30px] shrink-0 flex-col items-center justify-center rounded-[7px] bg-navy-900 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
+            >
+              <span className="font-display text-[15px] font-semibold leading-none tracking-[0.02em] text-white">AC</span>
+              <span className="mt-[3px] h-[1.5px] w-[13px] rounded-full bg-accent-400" />
             </span>
             <span className="truncate text-[14px] font-semibold tracking-[-0.01em] text-ink">Autocenter Jülich</span>
           </Link>
