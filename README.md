@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Autocenter Jülich – Website
 
-## Getting Started
-
-First, run the development server:
+Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · MongoDB · mobile.de Seller API
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev     # http://localhost:3000
+npm run build   # production build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment variables
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+See `.env.example`. Put the values in `.env.local` locally and in Vercel → Project → Settings → Environment Variables.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Google reviews (homepage section "Das sagen unsere Kunden")
 
-## Learn More
+1. Open <https://console.cloud.google.com/>, create/select a project and set up billing
+   (Google gives a free monthly usage quota; the site caches reviews for 12 h, so usage stays tiny).
+2. APIs & Services → Library → enable **Places API (New)**.
+3. APIs & Services → Credentials → **Create API key**. Restrict it to "Places API (New)".
+4. Set `GOOGLE_PLACES_API_KEY=...` (optionally `GOOGLE_PLACE_ID=...`).
 
-To learn more about Next.js, take a look at the following resources:
+Without a key the section still shows the rating (value from `src/lib/site.js`) and a link to Google Maps.
+Note: Google returns at most 5 reviews via the API.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### AI chat assistant (bottom-right)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Open <https://aistudio.google.com/apikey> and create a free API key.
+2. Set `GEMINI_API_KEY=...` (optional `GEMINI_MODEL`, default `gemini-2.5-flash`).
 
-## Deploy on Vercel
+The assistant knows the live mobile.de inventory, opening hours, financing and warranty info
+(prompt in `src/app/api/chat/route.js`). Without a key the chat shows a friendly "call us" message.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Where things live
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| What | File |
+| --- | --- |
+| Business data (phone, address, hours, rating fallback) | `src/lib/site.js` |
+| Design tokens (colors, buttons, fields) | `src/app/globals.css` |
+| Header / footer / cookie banner | `src/app/(components)/Navbar.jsx`, `Footer.jsx`, `CookieBanner.jsx` |
+| Car card used everywhere | `src/app/(components)/CarCard.jsx` |
+| Google reviews | `src/lib/googleReviews.js`, `src/app/(components)/GoogleReviews.jsx` |
+| AI chat | `src/app/(components)/ChatWidget.jsx`, `src/app/api/chat/route.js` |
+| Staff area header | `src/app/(Pages)/dashboard/layout.jsx` |

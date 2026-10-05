@@ -1,110 +1,85 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Cookie } from "lucide-react";
 
-const STORAGE_KEY = "ac_cookie_consent";
+export const COOKIE_STORAGE_KEY = "ac_cookie_consent";
+export const COOKIE_EVENT = "ac-cookie-consent";
+
+function readConsent() {
+  try {
+    return localStorage.getItem(COOKIE_STORAGE_KEY);
+  } catch {
+    return "unavailable";
+  }
+}
 
 export default function CookieBanner() {
   const [visible, setVisible] = useState(false);
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-
-    if (saved) return;
-
-    let showTimer;
-
-    const openTimer = setTimeout(() => {
-      setVisible(true);
-
-      showTimer = setTimeout(() => {
-        setShow(true);
-      }, 30);
-    }, 50);
-
+    if (readConsent()) return;
+    const t1 = setTimeout(() => setVisible(true), 400);
+    const t2 = setTimeout(() => setShow(true), 440);
     return () => {
-      clearTimeout(openTimer);
-      clearTimeout(showTimer);
+      clearTimeout(t1);
+      clearTimeout(t2);
     };
   }, []);
 
-  function closeBanner(payload) {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        ...payload,
-        date: new Date().toISOString(),
-      }),
-    );
-
+  function close(accepted) {
+    try {
+      localStorage.setItem(
+        COOKIE_STORAGE_KEY,
+        JSON.stringify({ accepted, date: new Date().toISOString() }),
+      );
+    } catch {
+      /* storage blocked – just hide */
+    }
+    window.dispatchEvent(new Event(COOKIE_EVENT));
     setShow(false);
-
-    setTimeout(() => {
-      setVisible(false);
-    }, 260);
-  }
-
-  function handleAccept() {
-    closeBanner({ accepted: true });
-  }
-
-  function handleNecessaryOnly() {
-    closeBanner({ accepted: false });
+    setTimeout(() => setVisible(false), 250);
   }
 
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[9999]">
-      <div
-        className={[
-          "w-full border-t border-white/20 bg-[linear-gradient(135deg,rgba(255,255,255,0.16),rgba(180,210,255,0.12))] shadow-[0_-10px_35px_rgba(0,0,0,0.18)] backdrop-blur-2xl",
-          "transition-all duration-300 ease-out",
-          show ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0",
-        ].join(" ")}
-      >
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
-          <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-semibold text-white sm:text-base">
-              Cookie-Einstellungen
-            </h3>
-
-            <p className="mt-1.5 max-w-3xl text-xs leading-5 text-white/85 sm:text-sm">
-              Wir verwenden Cookies, damit unsere Website zuverlässig
-              funktioniert und Sie die bestmögliche Erfahrung erhalten.
-            </p>
-
-            <p className="mt-1 text-[11px] leading-5 text-white/70 sm:text-xs">
-              Mehr dazu in unserer{" "}
-              <a
-                href="/Datenschutz"
-                className="text-[var(--ac-blue-light)] hover:underline"
-              >
+    <div
+      role="dialog"
+      aria-live="polite"
+      aria-label="Cookie-Einstellungen"
+      className={[
+        "fixed inset-x-2 bottom-2 z-[70] sm:inset-x-auto sm:left-4 sm:bottom-4 sm:max-w-sm",
+        "transition-all duration-300 ease-out",
+        show ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
+      ].join(" ")}
+    >
+      <div className="card p-4 shadow-float">
+        <div className="flex items-start gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+            <Cookie className="h-4 w-4" />
+          </span>
+          <div>
+            <h3 className="text-sm font-semibold">Cookies &amp; Datenschutz</h3>
+            <p className="mt-0.5 text-xs leading-5 text-muted">
+              Wir verwenden technisch notwendige Cookies, damit unsere Website zuverlässig
+              funktioniert. Mehr dazu in der{" "}
+              <Link href="/Datenschutz" className="font-medium text-brand-600 hover:underline">
                 Datenschutzerklärung
-              </a>
+              </Link>
               .
             </p>
           </div>
-
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <button
-              type="button"
-              onClick={handleNecessaryOnly}
-              className="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-white/16 sm:text-sm"
-            >
-              Nur notwendige
-            </button>
-
-            <button
-              type="button"
-              onClick={handleAccept}
-              className="rounded-xl px-4 py-2.5 text-xs font-semibold text-white transition hover:opacity-90 sm:text-sm"
-              style={{ background: "var(--ac-gradient-primary)" }}
-            >
-              Akzeptieren
-            </button>
-          </div>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => close(false)} className="btn btn-secondary btn-sm">
+            Nur notwendige
+          </button>
+          <button type="button" onClick={() => close(true)} className="btn btn-primary btn-sm">
+            Alle akzeptieren
+          </button>
         </div>
       </div>
     </div>

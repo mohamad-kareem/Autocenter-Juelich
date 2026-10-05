@@ -1,132 +1,124 @@
-"use client";
+import Image from "next/image";
 import Link from "next/link";
-const items = [
+import { ArrowRight, BadgeCheck, MapPin, Repeat, ShieldCheck, Star, Wallet } from "lucide-react";
+import Reveal from "./Reveal";
+import { SITE } from "@/lib/site";
+
+const BENEFITS = [
   {
-    title: "Individuelle Finanzierung",
-    text: "Maßgeschneiderte Lösungen für jedes Budget. Transparent und fair.",
-    tag: "Finance",
+    icon: BadgeCheck,
+    title: "Geprüfte Fahrzeuge",
+    text: "Gepflegt, ehrlich beschrieben, ohne Überraschungen.",
   },
   {
-    title: "Premium Fahrzeuge",
-    text: "Gepflegte Modelle verschiedener Hersteller. Qualität zu fairen Preisen.",
-    tag: "Selection",
+    icon: Wallet,
+    title: "Flexible Finanzierung",
+    text: "12 bis 84 Monate, mit oder ohne Anzahlung.",
+    href: "/finanzierung",
   },
   {
-    title: "Direkter Ankauf",
-    text: "Schnelle und unkomplizierte Bewertung Ihres Fahrzeugs.",
-    tag: "Trade-in",
+    icon: ShieldCheck,
+    title: "CarGarantie®",
+    text: "12 bis 36 Monate für Motor, Getriebe und Elektronik.",
+    href: "/garantie",
   },
   {
-    title: "Volle Transparenz",
-    text: "Klare Konditionen, verständliche Verträge, keine versteckten Kosten.",
-    tag: "Security",
+    icon: Repeat,
+    title: "Inzahlungnahme",
+    text: "Faire Bewertung, direkt verrechnet.",
+    href: "/kontakt?betreff=Inzahlungnahme%20anfragen",
   },
 ];
 
-export default function LandingFeaturesClean() {
+/** "Warum wir" – clean split section: one showroom photo + benefit list. */
+export default function Features({ rating, image }) {
+  const photo = image?.src ? image : { src: "/center2.jpeg", alt: "Fahrzeuge im Showroom von Autocenter Jülich" };
+  const ratingValue = (rating?.rating ?? SITE.googleRatingFallback.rating).toFixed(1).replace(".", ",");
+  const ratingCount = rating?.count ?? SITE.googleRatingFallback.count;
+
   return (
-    <section className="py-20 ac-page">
-      <div className="mx-auto max-w-7xl px-4">
-        {/* Minimal Header */}
-        <div className="mb-16 text-center">
-          <div className="inline-block mb-4">
-            <div className="h-px w-12 bg-gradient-to-r from-[var(--ac-blue)] to-[var(--ac-cyan)] mx-auto"></div>
-          </div>
-          <h2 className="text-4xl md:text-5xl font-light text-[var(--ac-text)] tracking-tight mb-4">
-            Professionelle <span className="font-semibold">Lösungen</span>
-          </h2>
-          <p className="text-[var(--ac-muted)] text-lg max-w-2xl mx-auto">
-            Moderner Autohandel mit Fokus auf Kundenbedürfnisse und Transparenz
-          </p>
-        </div>
-
-        {/* Clean Cards Grid using ac-panel */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {items.map((item, index) => (
-            <div key={item.title} className="relative group">
-              {/* Number Indicator */}
-              <div className="absolute -top-3 -left-3 z-10 w-8 h-8 rounded-full bg-gradient-to-br from-[var(--ac-blue)] to-[var(--ac-blue-light)] flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-black/30">
-                {index + 1}
-              </div>
-
-              {/* Card with ac-panel class */}
-              <div className="ac-panel rounded-xl p-6 h-full hover:border-[var(--ac-border-2)] transition-all duration-300 group-hover:translate-y-[-4px] group-hover:shadow-[var(--ac-shadow-light)]">
-                {/* Tag */}
-                <div className="mb-4">
-                  <span className="text-xs font-medium text-[var(--ac-blue-light)] uppercase tracking-wider">
-                    {item.tag}
+    <section className="mt-14">
+      <div className="container-ac grid items-center gap-10 py-6 lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:py-8">
+        {/* Photo */}
+        <Reveal className="relative overflow-hidden rounded-2xl ring-1 ring-line">
+          <div className="relative aspect-[4/3] w-full">
+            <Image
+              src={photo.src}
+              alt={photo.alt}
+              fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              unoptimized={String(photo.src).startsWith("/api/")}
+              className="object-cover"
+            />
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-navy-950/90 via-navy-950/40 to-transparent p-4 pt-14">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="flex items-center gap-2 text-white">
+                  <span className="flex">
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <Star key={i} className="h-3.5 w-3.5 fill-star text-star" />
+                    ))}
                   </span>
-                </div>
-
-                {/* Title */}
-                <h3 className="text-xl font-semibold text-[var(--ac-text)] mb-3">
-                  {item.title}
-                </h3>
-
-                {/* Description */}
-                <p className="text-[var(--ac-muted-2)] text-sm leading-relaxed">
-                  {item.text}
-                </p>
-
-                {/* Divider */}
-                <div className="mt-6 pt-4 border-t border-[var(--ac-border)]">
-                  <div className="text-xs text-[var(--ac-muted-2)]">
-                    <div className="flex items-center gap-2"></div>
-                  </div>
-                </div>
+                  <span className="text-[13px]">
+                    <strong className="font-semibold">{ratingValue}</strong>
+                    <span className="text-white/60"> · {ratingCount} Google-Bewertungen</span>
+                  </span>
+                </span>
+                <span className="flex items-center gap-1.5 text-[12px] text-white/70">
+                  <MapPin className="h-3.5 w-3.5 text-accent-400" />
+                  {SITE.street}, {SITE.city}
+                </span>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {/* CTA Section */}
-        <div className="mt-20 text-center">
-          <div className="ac-panel inline-block px-8 py-6 rounded-2xl">
-            <p className="mb-4 text-lg text-[var(--ac-text)]">
-              Bereit für den nächsten Schritt?
-            </p>
-
-            <Link
-              href="/kontakt"
-              className="ac-btn-primary inline-flex items-center justify-center px-8 py-3 rounded-lg text-sm font-medium"
-            >
-              Jetzt Beratungstermin vereinbaren
-            </Link>
-
-            <p className="mt-4 text-sm text-[var(--ac-muted-2)]">
-              Kostenlose & unverbindliche Beratung
-            </p>
-          </div>
-        </div>
-
-        {/* Bottom Stats */}
-        <div className="mt-20 pt-8 border-t border-[var(--ac-border)]">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-[var(--ac-text)] mb-2">
-                14+
-              </div>
-              <div className="text-sm text-[var(--ac-muted)]">
-                Jahre Erfahrung
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="text-3xl font-bold text-[var(--ac-text)] mb-2">
-                500+
-              </div>
-              <div className="text-sm text-[var(--ac-muted)]">
-                Zufriedene Kunden
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="text-3xl font-bold text-[var(--ac-text)] mb-2">
-                100%
-              </div>
-              <div className="text-sm text-[var(--ac-muted)]">Transparenz</div>
             </div>
           </div>
+        </Reveal>
+
+        {/* Benefits */}
+        <div>
+          <Reveal>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+              Warum Autocenter Jülich
+            </p>
+            <h2 className="font-display mt-3 text-[34px] leading-[1.1] text-ink sm:text-[44px]">
+              Autokauf mit gutem Gefühl.
+            </h2>
+          </Reveal>
+
+          <ul className="mt-7">
+            {BENEFITS.map(({ icon: Icon, ...b }, i) => {
+              const inner = (
+                <>
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-line transition group-hover:bg-brand-100">
+                    <Icon className="h-[17px] w-[17px]" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-1.5 text-[14px] font-semibold text-ink">
+                      {b.title}
+                      {b.href ? (
+                        <ArrowRight className="h-3.5 w-3.5 text-brand-600 opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100" />
+                      ) : null}
+                    </span>
+                    <span className="mt-0.5 block text-[13px] leading-relaxed text-muted">{b.text}</span>
+                  </span>
+                </>
+              );
+              return (
+                <Reveal
+                  as="li"
+                  key={b.title}
+                  delay={i * 70}
+                  className="border-t border-line first:border-t-0"
+                >
+                  {b.href ? (
+                    <Link href={b.href} className="group flex items-start gap-3.5 py-3.5">
+                      {inner}
+                    </Link>
+                  ) : (
+                    <div className="group flex items-start gap-3.5 py-3.5">{inner}</div>
+                  )}
+                </Reveal>
+              );
+            })}
+          </ul>
         </div>
       </div>
     </section>

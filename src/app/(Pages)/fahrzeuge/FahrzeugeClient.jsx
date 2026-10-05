@@ -1,170 +1,47 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
-import { useMemo, useState, useEffect, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ChevronRight, LayoutGrid, List, Search, SlidersHorizontal, X } from "lucide-react";
+import CarCard from "@/app/(components)/CarCard";
+import { PRICE_STEPS, formatNumber, fuelLabel, gearboxLabel, prettyBrand } from "@/lib/cars";
+import { SITE } from "@/lib/site";
 
-const formatPrice = (n) =>
-  new Intl.NumberFormat("de-DE").format(Number(n || 0));
-const formatKm = (n) => new Intl.NumberFormat("de-DE").format(Number(n || 0));
-
-const FUEL_LABELS = {
-  PETROL: "Benzin",
-  DIESEL: "Diesel",
-  ELECTRICITY: "Elektro",
-  HYBRID: "Hybrid",
-  HYBRID_DIESEL: "Hybrid (Diesel)",
-  LPG: "LPG",
-  CNG: "CNG",
+const cx = (...c) => c.filter(Boolean).join(" ");
+const PAGE_SIZE = 24;
+const CATEGORY_LABELS = {
+  Cabrio: "Cabrio / Roadster",
+  EstateCar: "Kombi",
+  Limousine: "Limousine",
+  OffRoad: "SUV / Geländewagen",
+  SmallCar: "Kleinwagen",
+  SportsCar: "Sportwagen / Coupé",
+  Van: "Van / Kleinbus",
 };
+const KM_STEPS = [10000, 25000, 50000, 75000, 100000, 150000];
 
-const GEARBOX_LABELS = {
-  AUTOMATIC_GEAR: "Automatik",
-  SEMIAUTOMATIC_GEAR: "Halbautomatik",
-  MANUAL_GEAR: "Schaltung",
+const EMPTY = {
+  q: "",
+  sort: "newest",
+  brands: [],
+  fuels: [],
+  gearbox: "",
+  minPrice: "",
+  maxPrice: "",
+  yearFrom: "",
+  yearTo: "",
+  maxKm: "",
+  cat: "",
 };
-
-function normalizeStr(v) {
-  return String(v || "").trim();
-}
-function isRemoteImage(src) {
-  return typeof src === "string" && /^https?:\/\//i.test(src);
-}
-function firstWords(text, count = 4) {
-  const clean = normalizeStr(text)
-    .replace(/\*/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!clean) return "";
-  return clean.split(" ").slice(0, count).join(" ");
-}
 
 function parseMulti(sp, key) {
   const raw = sp.get(key);
-  if (!raw) return [];
-  return raw
-    .split(",")
-    .map((x) => x.trim())
-    .filter(Boolean);
+  return raw ? raw.split(",").map((x) => x.trim()).filter(Boolean) : [];
 }
 
-function buildQuery(next) {
-  const params = new URLSearchParams();
-
-  if (next.q) params.set("q", next.q);
-  if (next.sort) params.set("sort", next.sort);
-
-  if (next.brands?.length) params.set("brand", next.brands.join(","));
-  if (next.fuels?.length) params.set("fuel", next.fuels.join(","));
-  if (next.gearbox) params.set("gearbox", next.gearbox);
-
-  if (next.minPrice) params.set("min", String(next.minPrice));
-  if (next.maxPrice) params.set("max", String(next.maxPrice));
-
-  if (next.yearFrom) params.set("yf", String(next.yearFrom));
-  if (next.yearTo) params.set("yt", String(next.yearTo));
-
-  const s = params.toString();
-  return s ? `?${s}` : "";
-}
-
-function FilterSection({ title, children }) {
-  return (
-    <div className="border-b border-white/10 pb-5">
-      <h3 className="mb-3 text-xs sm:text-sm font-semibold text-[var(--ac-text)]">
-        {title}
-      </h3>
-      {children}
-    </div>
-  );
-}
-
-function DividerDot() {
-  return <span className="mx-2 text-white/25">•</span>;
-}
-
-function SpecLine({ car }) {
-  const year = car.year ? String(car.year) : null;
-  const km = car.km != null ? `${formatKm(car.km)} km` : null;
-  const fuel = car.fuel ? FUEL_LABELS[car.fuel] || car.fuel : null;
-  const gearbox = car.gearbox
-    ? GEARBOX_LABELS[car.gearbox] || car.gearbox
-    : null;
-  const power = car.power ? `${car.power} PS` : null;
-
-  const parts = [year, km, fuel, gearbox, power].filter(Boolean);
-
-  // Keep it clean: show max 3 parts on small screens, 4 on bigger screens
-  const small = parts.slice(0, 3);
-  const big = parts.slice(0, 4);
-
-  return (
-    <>
-      <div className="sm:hidden text-[11px] leading-snug text-white/70">
-        {small.map((p, i) => (
-          <span key={p}>
-            {i > 0 ? <DividerDot /> : null}
-            {p}
-          </span>
-        ))}
-      </div>
-
-      <div className="hidden sm:block text-xs leading-snug text-white/70">
-        {big.map((p, i) => (
-          <span key={p}>
-            {i > 0 ? <DividerDot /> : null}
-            {p}
-          </span>
-        ))}
-      </div>
-    </>
-  );
-}
-
-export default function FahrzeugeClient({ initialCars = [] }) {
-  const router = useRouter();
-  const sp = useSearchParams();
-  const [isPending, startTransition] = useTransition();
-
-  // Options from data
-  const brands = useMemo(() => {
-    const set = new Set();
-    for (const c of initialCars) {
-      const b = normalizeStr(c.brand || firstWords(c.title, 1));
-      if (b) set.add(b);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "de"));
-  }, [initialCars]);
-
-  const fuels = useMemo(() => {
-    const set = new Set();
-    for (const c of initialCars) {
-      const f = normalizeStr(c.fuel);
-      if (f) set.add(f);
-    }
-    return Array.from(set).sort();
-  }, [initialCars]);
-
-  const gearboxes = useMemo(() => {
-    const set = new Set();
-    for (const c of initialCars) {
-      const g = normalizeStr(c.gearbox);
-      if (g) set.add(g);
-    }
-    return Array.from(set).sort();
-  }, [initialCars]);
-
-  const yearBounds = useMemo(() => {
-    const years = initialCars
-      .map((c) => Number(c.year))
-      .filter((y) => Number.isFinite(y));
-    if (!years.length) return { min: 2000, max: new Date().getFullYear() };
-    return { min: Math.min(...years), max: Math.max(...years) };
-  }, [initialCars]);
-
-  // Read initial state from URL
-  const [state, setState] = useState(() => ({
+function stateFromParams(sp) {
+  return {
     q: sp.get("q") || "",
     sort: sp.get("sort") || "newest",
     brands: parseMulti(sp, "brand"),
@@ -174,439 +51,463 @@ export default function FahrzeugeClient({ initialCars = [] }) {
     maxPrice: sp.get("max") || "",
     yearFrom: sp.get("yf") || "",
     yearTo: sp.get("yt") || "",
-  }));
+    maxKm: sp.get("km") || "",
+    cat: sp.get("cat") || "",
+  };
+}
 
-  // Sync state on back/forward / manual URL edit
+function buildQuery(s) {
+  const p = new URLSearchParams();
+  if (s.q) p.set("q", s.q);
+  if (s.sort && s.sort !== "newest") p.set("sort", s.sort);
+  if (s.brands.length) p.set("brand", s.brands.join(","));
+  if (s.fuels.length) p.set("fuel", s.fuels.join(","));
+  if (s.gearbox) p.set("gearbox", s.gearbox);
+  if (s.minPrice) p.set("min", s.minPrice);
+  if (s.maxPrice) p.set("max", s.maxPrice);
+  if (s.yearFrom) p.set("yf", s.yearFrom);
+  if (s.yearTo) p.set("yt", s.yearTo);
+  if (s.maxKm) p.set("km", s.maxKm);
+  if (s.cat) p.set("cat", s.cat);
+  const str = p.toString();
+  return str ? `?${str}` : "";
+}
+
+function FilterGroup({ title, children }) {
+  return (
+    <div className="border-b border-line py-3 first:pt-0 last:border-b-0 last:pb-0">
+      <h3 className="mb-2 text-[13px] font-semibold text-ink">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function CheckRow({ checked, onChange, label, count }) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 rounded px-1 py-[3px] text-[13px] text-body hover:bg-canvas">
+      <input type="checkbox" checked={checked} onChange={onChange} className="h-3.5 w-3.5 rounded" />
+      <span className="flex-1">{label}</span>
+      {count != null ? <span className="text-xs text-muted">{count}</span> : null}
+    </label>
+  );
+}
+
+export default function FahrzeugeClient({ initialCars = [] }) {
+  const router = useRouter();
+  const sp = useSearchParams();
+  const [isPending, startTransition] = useTransition();
+
+  const [state, setState] = useState(() => stateFromParams(sp));
+  const [view, setView] = useState("grid");
+  const [limit, setLimit] = useState(PAGE_SIZE);
+  const [drawer, setDrawer] = useState(false);
+
+  // Sync on back/forward (ignore URL changes we pushed ourselves)
+  const spKey = sp.toString();
+  const pushedRef = useRef(spKey);
   useEffect(() => {
-    setState((prev) => ({
-      ...prev,
-      q: sp.get("q") || "",
-      sort: sp.get("sort") || "newest",
-      brands: parseMulti(sp, "brand"),
-      fuels: parseMulti(sp, "fuel"),
-      gearbox: sp.get("gearbox") || "",
-      minPrice: sp.get("min") || "",
-      maxPrice: sp.get("max") || "",
-      yearFrom: sp.get("yf") || "",
-      yearTo: sp.get("yt") || "",
-    }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sp.toString()]);
+    if (spKey === pushedRef.current) return;
+    pushedRef.current = spKey;
+    setState(stateFromParams(new URLSearchParams(spKey)));
+  }, [spKey]);
 
   // Push to URL (debounced)
   useEffect(() => {
     const t = setTimeout(() => {
       const qs = buildQuery(state);
-      startTransition(() => router.replace(`/fahrzeuge${qs}`));
+      if (qs.slice(1) !== pushedRef.current) {
+        pushedRef.current = qs.slice(1);
+        startTransition(() => router.replace(`/fahrzeuge${qs}`, { scroll: false }));
+      }
     }, 250);
     return () => clearTimeout(t);
-  }, [state, router, startTransition]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
-  // Filtering + sorting
-  const filteredCars = useMemo(() => {
+  useEffect(() => setLimit(PAGE_SIZE), [state]);
+
+  useEffect(() => {
+    document.documentElement.style.overflow = drawer ? "hidden" : "";
+    return () => {
+      document.documentElement.style.overflow = "";
+    };
+  }, [drawer]);
+
+  const options = useMemo(() => {
+    const count = (key) => {
+      const m = new Map();
+      for (const c of initialCars) if (c[key]) m.set(c[key], (m.get(c[key]) || 0) + 1);
+      return m;
+    };
+    const years = initialCars.map((c) => c.year).filter(Boolean);
+    return {
+      brands: [...count("brand")].sort((a, b) => a[0].localeCompare(b[0], "de")),
+      fuels: [...count("fuel")].sort((a, b) => b[1] - a[1]),
+      gearboxes: [...count("gearbox")].sort((a, b) => b[1] - a[1]),
+      yearMin: years.length ? Math.min(...years) : new Date().getFullYear() - 15,
+      yearMax: years.length ? Math.max(...years) : new Date().getFullYear(),
+    };
+  }, [initialCars]);
+
+  const years = useMemo(
+    () => Array.from({ length: options.yearMax - options.yearMin + 1 }, (_, i) => options.yearMax - i),
+    [options],
+  );
+
+  const filtered = useMemo(() => {
     const q = state.q.trim().toLowerCase();
     const brandSet = new Set(state.brands);
     const fuelSet = new Set(state.fuels);
+    const num = (v) => (v !== "" ? Number(v) : null);
+    const min = num(state.minPrice);
+    const max = num(state.maxPrice);
+    const yf = num(state.yearFrom);
+    const yt = num(state.yearTo);
+    const km = num(state.maxKm);
 
-    const min = state.minPrice !== "" ? Number(state.minPrice) : null;
-    const max = state.maxPrice !== "" ? Number(state.maxPrice) : null;
-    const yf = state.yearFrom !== "" ? Number(state.yearFrom) : null;
-    const yt = state.yearTo !== "" ? Number(state.yearTo) : null;
-
-    let list = initialCars.filter((c) => {
-      const title = normalizeStr(c.title).toLowerCase();
-      const brand = normalizeStr(c.brand || firstWords(c.title, 1));
-      const model = normalizeStr(c.model);
-      const fuel = normalizeStr(c.fuel);
-      const gearbox = normalizeStr(c.gearbox);
-
-      const price = c.price != null ? Number(c.price) : null;
-      const year = c.year != null ? Number(c.year) : null;
-
-      if (q) {
-        const hay = `${title} ${brand} ${model}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-
-      if (brandSet.size && !brandSet.has(brand)) return false;
-      if (fuelSet.size && !fuelSet.has(fuel)) return false;
-
-      if (state.gearbox && gearbox !== state.gearbox) return false;
-
-      if (min != null && price != null && price < min) return false;
-      if (max != null && price != null && price > max) return false;
-
-      if (yf != null && year != null && year < yf) return false;
-      if (yt != null && year != null && year > yt) return false;
-
+    const list = initialCars.filter((c) => {
+      if (q && !`${c.title} ${c.brand} ${c.model}`.toLowerCase().includes(q)) return false;
+      if (brandSet.size && !brandSet.has(c.brand)) return false;
+      if (fuelSet.size && !fuelSet.has(c.fuel)) return false;
+      if (state.gearbox && c.gearbox !== state.gearbox) return false;
+      if (min != null && c.price < min) return false;
+      if (max != null && c.price > max) return false;
+      if (yf != null && c.year != null && c.year < yf) return false;
+      if (yt != null && c.year != null && c.year > yt) return false;
+      if (km != null && c.km != null && c.km > km) return false;
+      if (state.cat && c.category !== state.cat) return false;
       return true;
     });
 
-    const sort = state.sort || "newest";
-    list.sort((a, b) => {
-      const pa = a.price != null ? Number(a.price) : 0;
-      const pb = b.price != null ? Number(b.price) : 0;
-
-      const ka = a.km != null ? Number(a.km) : 999999999;
-      const kb = b.km != null ? Number(b.km) : 999999999;
-
-      const ya = a.year != null ? Number(a.year) : 0;
-      const yb = b.year != null ? Number(b.year) : 0;
-
-      if (sort === "price-asc") return pa - pb;
-      if (sort === "price-desc") return pb - pa;
-      if (sort === "km") return ka - kb;
-      return yb - ya; // newest
-    });
-
+    const sorters = {
+      "price-asc": (a, b) => a.price - b.price,
+      "price-desc": (a, b) => b.price - a.price,
+      km: (a, b) => (a.km ?? 1e12) - (b.km ?? 1e12),
+      "year-desc": (a, b) => (b.year || 0) - (a.year || 0),
+      newest: (a, b) =>
+        String(b.createdAt || "").localeCompare(String(a.createdAt || "")) || (b.year || 0) - (a.year || 0),
+    };
+    list.sort(sorters[state.sort] || sorters.newest);
+    // reserved cars at the end
+    list.sort((a, b) => Number(a.reserved) - Number(b.reserved));
     return list;
   }, [initialCars, state]);
 
-  // Helpers
-  const toggleInArray = (key, value) => {
+  const set = (patch) => setState((s) => ({ ...s, ...patch }));
+  const toggle = (key, value) =>
     setState((s) => {
-      const arr = new Set(s[key]);
-      if (arr.has(value)) arr.delete(value);
-      else arr.add(value);
-      return { ...s, [key]: Array.from(arr) };
+      const next = new Set(s[key]);
+      next.has(value) ? next.delete(value) : next.add(value);
+      return { ...s, [key]: [...next] };
     });
-  };
 
-  const resetAll = () => {
-    setState({
-      q: "",
-      sort: "newest",
-      brands: [],
-      fuels: [],
-      gearbox: "",
-      minPrice: "",
-      maxPrice: "",
-      yearFrom: "",
-      yearTo: "",
-    });
-  };
+  const chips = [
+    ...state.brands.map((b) => ({ label: prettyBrand(b), clear: () => toggle("brands", b) })),
+    ...state.fuels.map((f) => ({ label: fuelLabel(f), clear: () => toggle("fuels", f) })),
+    state.gearbox && { label: gearboxLabel(state.gearbox), clear: () => set({ gearbox: "" }) },
+    state.minPrice && { label: `ab ${formatNumber(state.minPrice)} €`, clear: () => set({ minPrice: "" }) },
+    state.maxPrice && { label: `bis ${formatNumber(state.maxPrice)} €`, clear: () => set({ maxPrice: "" }) },
+    state.yearFrom && { label: `EZ ab ${state.yearFrom}`, clear: () => set({ yearFrom: "" }) },
+    state.yearTo && { label: `EZ bis ${state.yearTo}`, clear: () => set({ yearTo: "" }) },
+    state.maxKm && { label: `bis ${formatNumber(state.maxKm)} km`, clear: () => set({ maxKm: "" }) },
+    state.q && { label: `„${state.q}“`, clear: () => set({ q: "" }) },
+    state.cat && { label: CATEGORY_LABELS[state.cat] || state.cat, clear: () => set({ cat: "" }) },
+  ].filter(Boolean);
+
+  const reset = () => setState(EMPTY);
+
+  const filters = (
+    <div>
+      <FilterGroup title="Suche">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+          <input
+            value={state.q}
+            onChange={(e) => set({ q: e.target.value })}
+            placeholder="Marke, Modell …"
+            className="field pl-9"
+            aria-label="Fahrzeuge durchsuchen"
+          />
+        </div>
+      </FilterGroup>
+
+      <FilterGroup title="Marke">
+        <div className="scroll-slim -mx-1 max-h-60 space-y-0.5 overflow-y-auto pr-1.5">
+          {options.brands.map(([b, n]) => (
+            <CheckRow
+              key={b}
+              checked={state.brands.includes(b)}
+              onChange={() => toggle("brands", b)}
+              label={prettyBrand(b)}
+              count={n}
+            />
+          ))}
+          {!options.brands.length ? <p className="px-1 text-sm text-muted">Keine Marken verfügbar</p> : null}
+        </div>
+      </FilterGroup>
+
+      <FilterGroup title="Preis">
+        <div className="grid grid-cols-2 gap-2">
+          <select value={state.minPrice} onChange={(e) => set({ minPrice: e.target.value })} className="field" aria-label="Preis von">
+            <option value="">von</option>
+            {PRICE_STEPS.map((p) => (
+              <option key={p} value={p}>
+                {formatNumber(p)} €
+              </option>
+            ))}
+          </select>
+          <select value={state.maxPrice} onChange={(e) => set({ maxPrice: e.target.value })} className="field" aria-label="Preis bis">
+            <option value="">bis</option>
+            {PRICE_STEPS.map((p) => (
+              <option key={p} value={p}>
+                {formatNumber(p)} €
+              </option>
+            ))}
+          </select>
+        </div>
+      </FilterGroup>
+
+      <FilterGroup title="Erstzulassung">
+        <div className="grid grid-cols-2 gap-2">
+          <select value={state.yearFrom} onChange={(e) => set({ yearFrom: e.target.value })} className="field" aria-label="Erstzulassung von">
+            <option value="">von</option>
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+          <select value={state.yearTo} onChange={(e) => set({ yearTo: e.target.value })} className="field" aria-label="Erstzulassung bis">
+            <option value="">bis</option>
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+      </FilterGroup>
+
+      <FilterGroup title="Kilometerstand">
+        <select value={state.maxKm} onChange={(e) => set({ maxKm: e.target.value })} className="field" aria-label="Kilometer bis">
+          <option value="">Beliebig</option>
+          {KM_STEPS.map((k) => (
+            <option key={k} value={k}>
+              bis {formatNumber(k)} km
+            </option>
+          ))}
+        </select>
+      </FilterGroup>
+
+      <FilterGroup title="Kraftstoff">
+        <div className="-mx-1 space-y-0.5">
+          {options.fuels.map(([f, n]) => (
+            <CheckRow key={f} checked={state.fuels.includes(f)} onChange={() => toggle("fuels", f)} label={fuelLabel(f)} count={n} />
+          ))}
+        </div>
+      </FilterGroup>
+
+      <FilterGroup title="Getriebe">
+        <div className="flex flex-wrap gap-2">
+          {[["", initialCars.length], ...options.gearboxes].map(([g]) => (
+            <button
+              key={g || "all"}
+              type="button"
+              onClick={() => set({ gearbox: g })}
+              className={cx(
+                "rounded border px-2.5 py-1 text-xs font-medium transition",
+                state.gearbox === g
+                  ? "border-brand-600 bg-brand-600 text-white"
+                  : "border-line-strong bg-white text-body hover:border-brand-500",
+              )}
+            >
+              {g ? gearboxLabel(g) : "Alle"}
+            </button>
+          ))}
+        </div>
+      </FilterGroup>
+    </div>
+  );
+
+  const visible = filtered.slice(0, limit);
 
   return (
-    <div className="px-4 sm:px-6 lg:px-12 py-6 sm:py-6 lg:py-8">
-      <div className="mx-auto w-full max-w-7xl">
-        {/* Header */}
-        <section className="relative mb-6 sm:mb-8">
-          <div className="h-px w-full bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-          <div className="max-w-3xl py-4 sm:py-6">
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold leading-tight text-[var(--ac-text)]">
-              Fahrzeuge <span className="ac-text-gradient">entdecken</span>
-            </h1>
-            <p className="mt-2 text-xs sm:text-base text-[var(--ac-muted-2)] leading-relaxed">
-              Finden Sie Ihr Wunschfahrzeug aus unserem aktuellen Bestand.
-            </p>
-          </div>
-          <div className="h-px w-full bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-        </section>
+    <div>
+      {/* Header */}
+      <section className="border-b border-line bg-white">
+        <div className="container-ac py-4">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-xs text-muted">
+            <Link href="/" className="hover:text-ink">
+              Startseite
+            </Link>
+            <ChevronRight className="h-3 w-3" />
+            <span className="text-ink">Fahrzeuge</span>
+          </nav>
+          <h1 className="font-display mt-2 text-[26px] leading-tight sm:text-[32px]">Gebrauchtwagen bei Autocenter Jülich</h1>
+          <p className="mt-0.5 text-sm text-muted">
+            {initialCars.length} Fahrzeuge im Bestand · direkt aus unserem aktuellen Bestand
+          </p>
+        </div>
+      </section>
 
-        <div className="flex flex-col lg:flex-row gap-6 lg:gap-10">
-          {/* Sidebar */}
-          <aside className="lg:w-80 flex-shrink-0">
-            <div className="lg:sticky lg:top-24 rounded-2xl border border-white/10 bg-[rgba(10,20,45,0.35)] p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-5 gap-4">
-                <h2 className="text-base sm:text-lg font-semibold text-[var(--ac-text)]">
-                  Filter
-                </h2>
-
-                <button
-                  type="button"
-                  onClick={resetAll}
-                  className="text-xs sm:text-sm text-[var(--ac-muted)] hover:text-[var(--ac-text)] transition"
-                >
+      <div className="container-ac mt-4 grid gap-4 lg:grid-cols-[250px_1fr] lg:gap-5">
+        {/* Sidebar (desktop) */}
+        <aside className="hidden lg:block">
+          <div className="scroll-slim card sticky top-[88px] max-h-[calc(100vh-104px)] overflow-y-auto p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+                <SlidersHorizontal className="h-4 w-4" /> Filter
+              </h2>
+              {chips.length ? (
+                <button type="button" onClick={reset} className="link text-xs">
                   Zurücksetzen
                 </button>
-              </div>
-
-              <FilterSection title="Suche">
-                <input
-                  value={state.q}
-                  onChange={(e) =>
-                    setState((s) => ({ ...s, q: e.target.value }))
-                  }
-                  placeholder="z.B. Opel, Crossland, Golf..."
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs sm:text-sm text-[var(--ac-text)] placeholder-[var(--ac-muted)] focus:border-[var(--accent)] focus:outline-none"
-                />
-              </FilterSection>
-
-              <FilterSection title="Marke">
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                  {brands.map((b) => (
-                    <label
-                      key={b}
-                      className="flex items-center gap-3 text-xs sm:text-sm text-[var(--ac-muted-2)] hover:text-[var(--ac-text)] transition"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={state.brands.includes(b)}
-                        onChange={() => toggleInArray("brands", b)}
-                        className="rounded border-white/20 bg-white/5 text-[var(--accent)] focus:ring-[var(--accent)]"
-                      />
-                      {b}
-                    </label>
-                  ))}
-                </div>
-              </FilterSection>
-
-              <FilterSection title="Preis (€)">
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      value={state.minPrice}
-                      onChange={(e) =>
-                        setState((s) => ({ ...s, minPrice: e.target.value }))
-                      }
-                      placeholder="Min"
-                      className="w-1/2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs sm:text-sm text-[var(--ac-text)] placeholder-[var(--ac-muted)] focus:border-[var(--accent)] focus:outline-none"
-                    />
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      value={state.maxPrice}
-                      onChange={(e) =>
-                        setState((s) => ({ ...s, maxPrice: e.target.value }))
-                      }
-                      placeholder="Max"
-                      className="w-1/2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs sm:text-sm text-[var(--ac-text)] placeholder-[var(--ac-muted)] focus:border-[var(--accent)] focus:outline-none"
-                    />
-                  </div>
-                  <p className="text-[11px] text-[var(--ac-muted)]">
-                    Tipp: leer lassen = keine Begrenzung
-                  </p>
-                </div>
-              </FilterSection>
-
-              <FilterSection title="Kraftstoff">
-                <div className="space-y-2">
-                  {fuels.map((f) => (
-                    <label
-                      key={f}
-                      className="flex items-center gap-3 text-xs sm:text-sm text-[var(--ac-muted-2)] hover:text-[var(--ac-text)] transition"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={state.fuels.includes(f)}
-                        onChange={() => toggleInArray("fuels", f)}
-                        className="rounded border-white/20 bg-white/5 text-[var(--accent)] focus:ring-[var(--accent)]"
-                      />
-                      {FUEL_LABELS[f] || f}
-                    </label>
-                  ))}
-                </div>
-              </FilterSection>
-
-              <FilterSection title="Getriebe">
-                <div className="space-y-2">
-                  <label className="flex items-center gap-3 text-xs sm:text-sm text-[var(--ac-muted-2)] hover:text-[var(--ac-text)] transition">
-                    <input
-                      type="radio"
-                      name="gearbox"
-                      checked={!state.gearbox}
-                      onChange={() => setState((s) => ({ ...s, gearbox: "" }))}
-                      className="border-white/20 bg-white/5 text-[var(--accent)] focus:ring-[var(--accent)]"
-                    />
-                    Alle
-                  </label>
-
-                  {gearboxes.map((g) => (
-                    <label
-                      key={g}
-                      className="flex items-center gap-3 text-xs sm:text-sm text-[var(--ac-muted-2)] hover:text-[var(--ac-text)] transition"
-                    >
-                      <input
-                        type="radio"
-                        name="gearbox"
-                        checked={state.gearbox === g}
-                        onChange={() => setState((s) => ({ ...s, gearbox: g }))}
-                        className="border-white/20 bg-white/5 text-[var(--accent)] focus:ring-[var(--accent)]"
-                      />
-                      {GEARBOX_LABELS[g] || g}
-                    </label>
-                  ))}
-                </div>
-              </FilterSection>
-
-              <FilterSection title="Baujahr">
-                <div className="grid grid-cols-2 gap-2">
-                  <select
-                    value={state.yearFrom}
-                    onChange={(e) =>
-                      setState((s) => ({ ...s, yearFrom: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs sm:text-sm text-[var(--ac-text)] focus:border-[var(--accent)] focus:outline-none"
-                  >
-                    <option value="" className="bg-[#0a0f26] text-white">
-                      Von
-                    </option>
-                    {Array.from(
-                      { length: yearBounds.max - yearBounds.min + 1 },
-                      (_, i) => yearBounds.min + i,
-                    )
-                      .reverse()
-                      .map((y) => (
-                        <option
-                          key={`yf-${y}`}
-                          value={String(y)}
-                          className="bg-[#0a0f26] text-white"
-                        >
-                          {y}
-                        </option>
-                      ))}
-                  </select>
-
-                  <select
-                    value={state.yearTo}
-                    onChange={(e) =>
-                      setState((s) => ({ ...s, yearTo: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs sm:text-sm text-[var(--ac-text)] focus:border-[var(--accent)] focus:outline-none"
-                  >
-                    <option value="" className="bg-[#0a0f26] text-white">
-                      Bis
-                    </option>
-                    {Array.from(
-                      { length: yearBounds.max - yearBounds.min + 1 },
-                      (_, i) => yearBounds.min + i,
-                    )
-                      .reverse()
-                      .map((y) => (
-                        <option
-                          key={`yt-${y}`}
-                          value={String(y)}
-                          className="bg-[#0a0f26] text-white"
-                        >
-                          {y}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </FilterSection>
-
-              <div className="mt-5">
-                <div className="text-[11px] text-[var(--ac-muted)]">
-                  {isPending ? "Filter werden angewendet..." : " "}
-                </div>
-              </div>
+              ) : null}
             </div>
-          </aside>
+            {filters}
+          </div>
+        </aside>
 
-          {/* Grid */}
-          <main className="flex-1">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-              <p className="text-xs sm:text-sm text-[var(--ac-muted-2)]">
-                <span className="font-semibold text-[var(--ac-text)]">
-                  {filteredCars.length}
-                </span>{" "}
-                Fahrzeuge gefunden
+        {/* Results */}
+        <div className="min-w-0">
+          <div className="card flex flex-wrap items-center justify-between gap-2 px-2.5 py-2 sm:px-3">
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => setDrawer(true)} className="btn btn-secondary btn-sm lg:hidden">
+                <SlidersHorizontal className="h-4 w-4" />
+                Filter{chips.length ? ` (${chips.length})` : ""}
+              </button>
+              <p className="text-sm text-body">
+                <span className="font-bold text-ink">{filtered.length}</span>{" "}
+                Treffer
+                {isPending ? <span className="ml-2 text-xs text-muted">aktualisiere …</span> : null}
               </p>
+            </div>
 
+            <div className="flex items-center gap-2">
               <select
                 value={state.sort}
-                onChange={(e) =>
-                  setState((s) => ({ ...s, sort: e.target.value }))
-                }
-                className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs sm:text-sm text-[var(--ac-text)] focus:border-[var(--accent)] focus:outline-none"
+                onChange={(e) => set({ sort: e.target.value })}
+                className="field h-8 w-40 text-[13px] sm:w-auto"
+                aria-label="Sortierung"
               >
-                <option value="newest" className="bg-[#0a0f26] text-white">
-                  Sortieren: Neueste
-                </option>
-                <option value="price-asc" className="bg-[#0a0f26] text-white">
-                  Preis aufsteigend
-                </option>
-                <option value="price-desc" className="bg-[#0a0f26] text-white">
-                  Preis absteigend
-                </option>
-                <option value="km" className="bg-[#0a0f26] text-white">
-                  Kilometerstand
-                </option>
+                <option value="newest">Neueste Angebote</option>
+                <option value="price-asc">Preis aufsteigend</option>
+                <option value="price-desc">Preis absteigend</option>
+                <option value="km">Kilometer aufsteigend</option>
+                <option value="year-desc">Erstzulassung (neueste)</option>
               </select>
+              <div className="hidden rounded-lg border border-line-strong p-0.5 sm:flex" role="group" aria-label="Ansicht">
+                {[
+                  ["grid", LayoutGrid, "Kacheln"],
+                  ["list", List, "Liste"],
+                ].map(([v, Icon, label]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setView(v)}
+                    aria-label={label}
+                    aria-pressed={view === v}
+                    className={cx(
+                      "flex h-7 w-7 items-center justify-center rounded transition",
+                      view === v ? "bg-navy-900 text-white" : "text-muted hover:text-ink",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {filteredCars.length === 0 ? (
-              <div className="rounded-2xl border border-white/10 bg-[rgba(10,20,45,0.35)] p-8 sm:p-10 text-center">
-                <h3 className="text-base sm:text-lg font-semibold text-[var(--ac-text)]">
-                  Keine Fahrzeuge gefunden
-                </h3>
-                <p className="mt-2 text-xs sm:text-sm text-[var(--ac-muted-2)]">
-                  Bitte Filter anpassen oder zurücksetzen.
-                </p>
-                <button
-                  type="button"
-                  onClick={resetAll}
-                  className="mt-5 ac-btn-primary rounded-xl px-5 py-3 text-xs sm:text-sm font-semibold"
-                >
-                  Filter zurücksetzen
+            {chips.length ? (
+              <div className="flex w-full flex-wrap items-center gap-1.5 border-t border-line pt-2">
+                {chips.map((c) => (
+                  <button
+                    key={c.label}
+                    type="button"
+                    onClick={c.clear}
+                    className="chip border border-brand-200 bg-brand-50 text-brand-700 hover:border-brand-500"
+                  >
+                    {c.label}
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ))}
+                <button type="button" onClick={reset} className="text-xs font-medium text-muted hover:text-ink">
+                  Alle entfernen
                 </button>
               </div>
-            ) : (
-              <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                {filteredCars.map((car) => {
-                  const img = car.images?.[0] || "/placeholder-car.jpg";
-                  const titleShort =
-                    firstWords(car.title, 4) || car.title || "Fahrzeug";
+            ) : null}
+          </div>
 
-                  return (
-                    <Link
-                      key={car.id || `${car.title}-${img}`}
-                      href={`/fahrzeuge/${car.id}`}
-                      className="group rounded-2xl border border-white/10 overflow-hidden bg-[rgba(10,20,45,0.35)] hover:bg-[rgba(10,20,45,0.45)] transition"
-                    >
-                      <div className="relative aspect-[16/10]">
-                        <Image
-                          src={img}
-                          alt={titleShort}
-                          fill
-                          unoptimized={isRemoteImage(img)}
-                          className="object-cover transition duration-500 group-hover:scale-105"
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
-
-                        {car.isSold && (
-                          <div className="absolute top-3 left-3 rounded-xl bg-black/60 px-3 py-1 text-[11px] sm:text-xs font-semibold text-white border border-white/15 backdrop-blur-sm">
-                            VERKAUFT
-                          </div>
-                        )}
-
-                        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-3">
-                          <div className="text-sm sm:text-base font-extrabold text-white">
-                            {formatPrice(car.price)} €
-                          </div>
-                          <div className="text-[11px] sm:text-xs text-white/80">
-                            {car.location || "Jülich"}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-4 sm:p-5">
-                        <h3 className="text-sm sm:text-base font-bold text-[var(--ac-text)] leading-snug line-clamp-1">
-                          {titleShort}
-                        </h3>
-
-                        <div className="mt-2">
-                          <SpecLine car={car} />
-                        </div>
-
-                        <div className="mt-3 sm:mt-4 flex items-center justify-between">
-                          <span className="text-[11px] sm:text-xs text-[var(--ac-muted)]">
-                            Details ansehen
-                          </span>
-                          <span className="h-8 w-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/70 group-hover:text-white transition">
-                            →
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
+          {filtered.length === 0 ? (
+            <div className="card mt-3 p-8 text-center">
+              <h2 className="text-base font-semibold">Keine passenden Fahrzeuge gefunden</h2>
+              <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+                Passen Sie die Filter an – oder rufen Sie uns an. Wir suchen gerne ein passendes Fahrzeug für Sie:{" "}
+                <a href={SITE.phoneHref} className="font-semibold text-brand-600">
+                  {SITE.phoneDisplay}
+                </a>
+              </p>
+              {chips.length ? (
+                <button type="button" onClick={reset} className="btn btn-primary mt-4">
+                  Filter zurücksetzen
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <>
+              <div
+                className={cx(
+                  "mt-3 grid gap-3",
+                  view === "list" ? "grid-cols-1" : "grid-cols-2 md:grid-cols-3",
+                )}
+              >
+                {visible.map((car, i) => (
+                  <CarCard key={car.id} car={car} layout={view} priority={i < 3} />
+                ))}
               </div>
-            )}
-          </main>
+
+              {filtered.length > limit ? (
+                <div className="mt-6 text-center">
+                  <p className="mb-2 text-xs text-muted">
+                    {visible.length} von {filtered.length} Fahrzeugen
+                  </p>
+                  <button type="button" onClick={() => setLimit((l) => l + PAGE_SIZE)} className="btn btn-secondary">
+                    Weitere Fahrzeuge laden
+                  </button>
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile filter drawer */}
+      <div className={cx("fixed inset-0 z-[90] lg:hidden", drawer ? "" : "pointer-events-none")} aria-hidden={!drawer}>
+        <div
+          className={cx("absolute inset-0 bg-navy-950/60 transition-opacity", drawer ? "opacity-100" : "opacity-0")}
+          onClick={() => setDrawer(false)}
+        />
+        <div
+          className={cx(
+            "absolute inset-x-0 bottom-0 flex max-h-[90vh] flex-col rounded-t-2xl bg-white transition-transform duration-300",
+            drawer ? "translate-y-0" : "translate-y-full",
+          )}
+        >
+          <div className="flex items-center justify-between border-b border-line px-4 py-3">
+            <h2 className="text-base font-semibold">Filter</h2>
+            <button type="button" onClick={() => setDrawer(false)} aria-label="Schließen" className="rounded-lg p-2 hover:bg-canvas">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="scroll-slim flex-1 overflow-y-auto px-4 py-4">{filters}</div>
+          <div className="grid grid-cols-2 gap-2 border-t border-line p-3">
+            <button type="button" onClick={reset} className="btn btn-secondary">
+              Zurücksetzen
+            </button>
+            <button type="button" onClick={() => setDrawer(false)} className="btn btn-primary">
+              {filtered.length} Treffer zeigen
+            </button>
+          </div>
         </div>
       </div>
     </div>

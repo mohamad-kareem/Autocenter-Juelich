@@ -1,178 +1,94 @@
 import Link from "next/link";
-import {
-  Clock,
-  Mail,
-  Phone,
-  MapPin,
-  ChevronRight,
-  User,
-  ShieldCheck,
-} from "lucide-react";
+import { Lock } from "lucide-react";
+import Logo from "./Logo";
+import OpeningStatus from "./OpeningStatus";
+import { SITE } from "@/lib/site";
+
+const COLUMNS = [
+  {
+    title: "Service",
+    items: [
+      { label: "Alle Fahrzeuge", href: "/fahrzeuge" },
+      { label: "Finanzierung", href: "/finanzierung" },
+      { label: "CarGarantie®", href: "/garantie" },
+      { label: "Inzahlungnahme", href: "/kontakt?betreff=Inzahlungnahme%20anfragen" },
+    ],
+  },
+  {
+    title: "Unternehmen",
+    items: [
+      { label: "Kontakt", href: "/kontakt" },
+      { label: "Impressum", href: "/Impressum" },
+      { label: "Datenschutz", href: "/Datenschutz" },
+    ],
+  },
+];
 
 export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative border-t border-white/10">
-      <div
-        className="bg-[linear-gradient(135deg,var(--ac-bg-0),var(--ac-bg-1)_45%,var(--ac-bg-2))]"
-        style={{ color: "var(--ac-text)" }}
-      >
-        <div className="h-1 w-full bg-[var(--ac-blue)]" />
-
-        <div className="mx-auto max-w-7xl px-4 py-12">
-          <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-4">
-            {/* Brand */}
-            <section>
-              <Link href="/" className="flex items-center gap-3">
-                <span className="text-lg font-extrabold text-[var(--ac-text)]">
-                  AutoCenter{" "}
-                  <span className="text-[var(--ac-blue-light)]">Jülich</span>
-                </span>
-              </Link>
-
-              <p className="mt-4 max-w-sm text-sm leading-6 text-[var(--ac-muted)]">
-                Ihr zuverlässiger Partner für hochwertige Fahrzeuge und
-                exzellenten Service.
-              </p>
-
-              <Link
-                href="/login"
-                aria-label="Zum Login"
-                title="Login"
-                className="mt-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[var(--ac-blue-light)] transition hover:scale-105 hover:border-[var(--ac-blue)] hover:bg-white/10"
-              >
-                <ShieldCheck className="h-5 w-5" />
-              </Link>
-            </section>
-
-            {/* Öffnungszeiten */}
-            <section>
-              <h4 className="text-sm font-bold text-[var(--ac-text)]">
-                Öffnungszeiten
-                <span className="mt-2 block h-[2px] w-12 rounded-full bg-[var(--ac-blue)]" />
-              </h4>
-
-              <ul className="mt-5 space-y-3 text-sm text-[var(--ac-muted)]">
-                <li className="flex items-start gap-3">
-                  <Clock className="mt-0.5 h-4 w-4 text-[var(--ac-blue-light)]" />
-                  <span>
-                    <span className="font-semibold text-[var(--ac-text)]">
-                      Mo–Fr:
-                    </span>{" "}
-                    9:30 – 18:00 Uhr
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Clock className="mt-0.5 h-4 w-4 text-[var(--ac-blue-light)]" />
-                  <span>
-                    <span className="font-semibold text-[var(--ac-text)]">
-                      Sa:
-                    </span>{" "}
-                    9:30 – 15:00 Uhr
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Clock className="mt-0.5 h-4 w-4 text-[var(--ac-blue-light)]" />
-                  <span>
-                    <span className="font-semibold text-[var(--ac-text)]">
-                      So:
-                    </span>{" "}
-                    nach telefonischer Absprache
-                  </span>
-                </li>
-              </ul>
-            </section>
-
-            {/* Kontakt */}
-            <section>
-              <h4 className="text-sm font-bold text-[var(--ac-text)]">
-                Kontakt
-                <span className="mt-2 block h-[2px] w-12 rounded-full bg-[var(--ac-blue)]" />
-              </h4>
-
-              <address className="mt-5 not-italic">
-                <ul className="space-y-3 text-sm text-[var(--ac-muted)]">
-                  <li>
-                    <a
-                      href="mailto:info@autocenter-juelich.de"
-                      className="flex items-start gap-3 transition hover:text-[var(--ac-blue-light)]"
-                    >
-                      <Mail className="mt-0.5 h-4 w-4 text-[var(--ac-blue-light)]" />
-                      <span className="break-all">
-                        info@autocenter-juelich.de
-                      </span>
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="tel:+492461123456"
-                      className="flex items-start gap-3 transition hover:text-[var(--ac-blue-light)]"
-                    >
-                      <Phone className="mt-0.5 h-4 w-4 text-[var(--ac-blue-light)]" />
-                      <span>+49 2461 9163780</span>
-                    </a>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <MapPin className="mt-0.5 h-4 w-4 text-[var(--ac-blue-light)]" />
-                    <span>
-                      <span className="font-semibold text-[var(--ac-text)]">
-                        Adresse
-                      </span>
-                      <br />
-                      Rudolf-Diesel-Str. 5
-                      <br />
-                      52428 Jülich
-                    </span>
-                  </li>
-                </ul>
-              </address>
-            </section>
-
-            {/* Rechtliches */}
-            <section>
-              <h4 className="text-sm font-bold text-[var(--ac-text)]">
-                Rechtliches
-                <span className="mt-2 block h-[2px] w-12 rounded-full bg-[var(--ac-blue)]" />
-              </h4>
-
-              <nav className="mt-5">
-                <ul className="space-y-2 text-sm">
-                  <li>
-                    <Link
-                      href="/Impressum"
-                      className="group inline-flex items-center gap-2 text-[var(--ac-muted)] transition hover:text-[var(--ac-blue-light)]"
-                    >
-                      <ChevronRight className="h-4 w-4 text-[var(--ac-blue-light)] transition group-hover:translate-x-0.5" />
-                      Impressum
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/Datenschutz"
-                      className="group inline-flex items-center gap-2 text-[var(--ac-muted)] transition hover:text-[var(--ac-blue-light)]"
-                    >
-                      <ChevronRight className="h-4 w-4 text-[var(--ac-blue-light)] transition group-hover:translate-x-0.5" />
-                      Datenschutz
-                    </Link>
-                  </li>
-                </ul>
-              </nav>
-            </section>
+    <footer className="mt-14 bg-navy-800 text-[13px] text-white/65">
+      <div className="container-ac grid gap-8 py-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr] lg:gap-10">
+        {/* Brand & address */}
+        <div>
+          <Logo className="h-8 w-auto" />
+          <address className="mt-4 space-y-0.5 not-italic leading-relaxed">
+            <span className="block text-white/85">{SITE.name}</span>
+            {SITE.street}
+            <br />
+            {SITE.zip} {SITE.city}
+          </address>
+          <div className="mt-3 space-y-0.5">
+            <a href={SITE.phoneHref} className="block text-white/85 transition hover:text-white">
+              {SITE.phoneDisplay}
+            </a>
+            <a href={`mailto:${SITE.email}`} className="block transition hover:text-white">
+              {SITE.email}
+            </a>
           </div>
+        </div>
 
-          <div className="mt-10 flex flex-col gap-2 border-t border-white/10 pt-6 text-xs text-[var(--ac-muted)] md:flex-row md:items-center md:justify-between">
-            <p>
-              © {year}{" "}
-              <span className="font-semibold text-[var(--ac-text)]">
-                AutoCenter Jülich
-              </span>
-              . Alle Rechte vorbehalten.
-            </p>
-            <p className="text-[var(--ac-muted-2)]">
-              Professionelle Fahrzeugdienstleistungen seit Jahren
-            </p>
-          </div>
+        {/* Link columns */}
+        {COLUMNS.map((group) => (
+          <nav key={group.title} aria-label={group.title}>
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-white">{group.title}</h3>
+            <ul className="mt-4 space-y-2.5">
+              {group.items.map((l) => (
+                <li key={l.label}>
+                  <Link href={l.href} className="transition hover:text-white">
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ))}
+
+        {/* Opening hours */}
+        <div>
+          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-white">Öffnungszeiten</h3>
+          <dl className="mt-4 space-y-2">
+            {SITE.openingHours.map((h) => (
+              <div key={h.days} className="flex justify-between gap-4">
+                <dt>{h.short}</dt>
+                <dd className="text-right text-white/85">{h.time}</dd>
+              </div>
+            ))}
+          </dl>
+          <OpeningStatus className="mt-3" />
+        </div>
+      </div>
+
+      <div className="border-t border-white/15">
+        <div className="container-ac flex flex-col gap-1.5 py-4 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            © {year} {SITE.name} · Inhaber {SITE.legalOwner}
+          </p>
+          <Link href="/login" className="inline-flex items-center gap-1 transition hover:text-white">
+            <Lock className="h-3 w-3" />
+            Mitarbeiter
+          </Link>
         </div>
       </div>
     </footer>

@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { BarChart3, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 
 const ENTRIES_PER_PAGE = 15;
 
@@ -255,376 +255,285 @@ export default function ZeiterfassungClient() {
     setCurrentPage((prev) => Math.min(totalPages, prev + 1));
   }
 
+  const selectCls = "field h-10 py-0 text-sm";
+
+  function Modal({ title, onClose, onSubmit, children }) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/60 p-4" onClick={onClose}>
+        <div className="card animate-pop-in w-full max-w-md p-6 shadow-float" onClick={(e) => e.stopPropagation()}>
+          <h3 className="text-xl font-bold">{title}</h3>
+          <form onSubmit={onSubmit} className="mt-5 space-y-4">
+            {children}
+            <div className="flex gap-2 pt-2">
+              <button type="submit" className="btn btn-primary flex-1">
+                Speichern
+              </button>
+              <button type="button" onClick={onClose} className="btn btn-secondary flex-1">
+                Abbrechen
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  const actionFields = (value, setValue) => (
+    <div>
+      <span className="label">Aktion</span>
+      <div className="grid grid-cols-2 gap-2">
+        {[
+          ["in", "EIN"],
+          ["out", "AUS"],
+        ].map(([v, label]) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setValue(v)}
+            className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+              value === v
+                ? v === "in"
+                  ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                  : "border-rose-500 bg-rose-50 text-rose-700"
+                : "border-line-strong text-body hover:border-brand-500"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen ac-page px-4 py-6">
-      <div className="mx-auto max-w-7xl text-white">
-        <div className="rounded-2xl border border-white/10 bg-[#0f1b36] p-4 sm:p-5">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div className="min-w-0">
-              <div className="flex items-center gap-3">
-                <Link
-                  href="/dashboard"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-white transition hover:bg-white/10"
-                  aria-label="Zurück zum Dashboard"
-                >
-                  ←
-                </Link>
+    <div className="mx-auto max-w-[1600px]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Zeiterfassung</h1>
+          <p className="mt-1 text-muted">Übersicht und Verwaltung der Stempelzeiten.</p>
+        </div>
 
-                <div>
-                  <h1 className="text-2xl font-bold tracking-tight">
-                    Zeiterfassung
-                  </h1>
-                  <p className="mt-1 text-sm text-white/65">
-                    Übersicht und Verwaltung der Stempelzeiten.
-                  </p>
+        <div className="flex flex-wrap items-end gap-2">
+          <div>
+            <label htmlFor="month" className="label">
+              Monat
+            </label>
+            <input
+              id="month"
+              type="month"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              className="field h-10 w-44 py-0 text-sm"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowSummary((prev) => !prev)}
+            className={`btn h-10 py-0 text-sm ${showSummary ? "bg-navy-900 text-white hover:bg-navy-800" : "btn-secondary"}`}
+          >
+            <BarChart3 className="h-4 w-4" />
+            Monatsübersicht
+          </button>
+          <button type="button" onClick={openAddModal} className="btn btn-primary h-10 py-0 text-sm">
+            <Plus className="h-4 w-4" />
+            Stempel hinzufügen
+          </button>
+        </div>
+      </div>
+
+      {showSummary && (
+        <div className="card mt-6 p-5 sm:p-6">
+          <h2 className="text-lg font-semibold">Monatssumme pro Mitarbeiter</h2>
+          {loading && sortedSummary.length === 0 ? (
+            <p className="mt-3 text-sm text-muted">Lade Übersicht …</p>
+          ) : sortedSummary.length === 0 ? (
+            <p className="mt-3 text-sm text-muted">Keine Übersicht für diesen Monat.</p>
+          ) : (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {sortedSummary.map((item) => (
+                <div key={item.userId} className="rounded-xl bg-canvas p-4">
+                  <p className="truncate text-sm font-semibold text-ink">{item.userName}</p>
+                  <p className="mt-1 text-2xl font-bold text-navy-900">{minutesToGermanHours(item.totalMinutes)}</p>
                 </div>
-              </div>
+              ))}
             </div>
+          )}
+        </div>
+      )}
 
-            <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:flex-wrap lg:items-end lg:justify-end">
-              <div className="min-w-[170px]">
-                <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/60">
-                  Monat
-                </label>
-                <input
-                  type="month"
-                  value={month}
-                  onChange={(e) => setMonth(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-white/10 bg-[#0f1b36] px-3 text-sm text-white outline-none transition focus:border-white/20 focus:bg-white/[0.03]"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowSummary((prev) => !prev)}
-                className="h-10 rounded-xl border border-white/10 bg-[#0f1b36] px-4 text-sm font-medium text-white transition hover:bg-white/10"
-              >
-                {showSummary ? "Übersicht ausblenden" : "Übersicht"}
-              </button>
-
-              <button
-                type="button"
-                onClick={openAddModal}
-                className="h-10 rounded-xl px-4 text-sm font-medium text-white shadow-sm"
-                style={{ background: "var(--ac-gradient-primary)" }}
-              >
-                + Stempel hinzufügen
-              </button>
-            </div>
+      <div className="card mt-6 overflow-hidden">
+        <div className="flex items-center justify-between border-b border-line px-5 py-4">
+          <div>
+            <h2 className="text-lg font-semibold">Einträge</h2>
+            <p className="text-xs text-muted">
+              {records.length > 0 ? `${pageStart}–${pageEnd} von ${records.length} Einträgen` : "Keine Einträge vorhanden"}
+            </p>
           </div>
         </div>
 
-        {showSummary && (
-          <div className="mt-5 rounded-2xl border border-white/10 bg-[#0f1b36] p-4 sm:p-5">
-            <div className="mb-3">
-              <h2 className="text-base font-semibold sm:text-lg">
-                Monatssumme pro Mitarbeiter
-              </h2>
-            </div>
-
-            {loading && sortedSummary.length === 0 ? (
-              <div className="text-sm text-white/70">Lade Übersicht...</div>
-            ) : sortedSummary.length === 0 ? (
-              <div className="text-sm text-white/70">
-                Keine Übersicht für diesen Monat.
-              </div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {sortedSummary.map((item) => (
-                  <div
-                    key={item.userId}
-                    className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5"
-                  >
-                    <p className="truncate text-sm font-semibold text-white">
-                      {item.userName}
-                    </p>
-                    <p className="mt-1 text-sm text-white/75">
-                      {minutesToGermanHours(item.totalMinutes)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-[#0f1b36]">
-          <div className="border-b border-white/10 px-4 py-3 sm:px-5">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-base font-semibold sm:text-lg">Einträge</h2>
-                <p className="mt-1 text-xs text-white/55">
-                  {records.length > 0
-                    ? `${pageStart}-${pageEnd} von ${records.length} Einträgen`
-                    : "Keine Einträge vorhanden"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-sm text-white">
-              <thead className="bg-white/[0.02] text-xs uppercase tracking-wide text-white/55">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[860px] text-sm">
+            <thead className="bg-canvas text-left text-xs font-semibold uppercase tracking-wider text-muted">
+              <tr>
+                <th className="px-5 py-3">Mitarbeiter</th>
+                <th className="px-5 py-3">Datum &amp; Uhrzeit</th>
+                <th className="px-5 py-3">Stempel</th>
+                <th className="px-5 py-3">Quelle</th>
+                <th className="px-5 py-3 text-right">Aktionen</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {loading ? (
                 <tr>
-                  <th className="px-5 py-3 text-left font-medium">
-                    Mitarbeiter
-                  </th>
-                  <th className="px-5 py-3 text-left font-medium">
-                    Datum & Uhrzeit
-                  </th>
-                  <th className="px-5 py-3 text-left font-medium">Stempel</th>
-                  <th className="px-5 py-3 text-left font-medium">Quelle</th>
-                  <th className="px-18 py-3 text-left font-medium">Aktionen</th>
+                  <td colSpan={5} className="px-5 py-8 text-center text-muted">
+                    Lädt …
+                  </td>
                 </tr>
-              </thead>
-
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="px-5 py-5 text-white/70">
-                      Lädt...
+              ) : paginatedRecords.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-5 py-8 text-center text-muted">
+                    Keine Einträge gefunden.
+                  </td>
+                </tr>
+              ) : (
+                paginatedRecords.map((record) => (
+                  <tr key={record._id} className="transition hover:bg-canvas/60">
+                    <td className="px-5 py-3.5 font-medium text-ink">{record.userName}</td>
+                    <td className="px-5 py-3.5 tabular-nums text-body">{formatDate(record.timestamp)}</td>
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={`chip ${
+                          record.action === "in" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+                        }`}
+                      >
+                        {record.action === "in" ? "EIN" : "AUS"}
+                      </span>
                     </td>
-                  </tr>
-                ) : paginatedRecords.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-5 py-5 text-white/70">
-                      Keine Einträge gefunden.
+                    <td className="px-5 py-3.5 text-muted">
+                      <span className="block max-w-[260px] truncate">{getSourceLabel(record)}</span>
                     </td>
-                  </tr>
-                ) : (
-                  paginatedRecords.map((record) => (
-                    <tr
-                      key={record._id}
-                      className="border-t border-white/10 align-middle transition hover:bg-white/[0.025]"
-                    >
-                      <td className="px-5 py-4 font-medium text-white">
-                        {record.userName}
-                      </td>
-
-                      <td className="px-5 py-4 text-white/80">
-                        {formatDate(record.timestamp)}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide ${
-                            record.action === "in"
-                              ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-                              : "border border-red-500/30 bg-red-500/10 text-red-300"
-                          }`}
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(record)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-3 py-1.5 text-xs font-medium text-body transition hover:border-brand-500 hover:text-brand-700"
                         >
-                          {record.action === "in" ? "EIN" : "AUS"}
-                        </span>
-                      </td>
+                          <Pencil className="h-3.5 w-3.5" />
+                          Bearbeiten
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(record._id)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Löschen
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-                      <td className="px-5 py-4 text-white/70">
-                        <span className="block max-w-[270px] truncate">
-                          {getSourceLabel(record)}
-                        </span>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => openEdit(record)}
-                            className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-white/10"
-                          >
-                            Bearbeiten
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(record._id)}
-                            className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-300 transition hover:bg-red-500/20"
-                          >
-                            Löschen
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex flex-col gap-3 border-t border-white/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-            <p className="text-xs text-white/55">
-              {records.length > 0
-                ? `${pageStart}-${pageEnd} von ${records.length} Einträgen`
-                : "0 Einträge"}
-            </p>
-
-            <div className="flex items-center gap-2 self-end sm:self-auto">
-              <button
-                type="button"
-                onClick={goToPrevPage}
-                disabled={currentPage === 1}
-                className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Zurück
-              </button>
-
-              <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-white/80">
-                Seite {currentPage} / {totalPages}
-              </div>
-
-              <button
-                type="button"
-                onClick={goToNextPage}
-                disabled={currentPage === totalPages}
-                className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Weiter
-              </button>
-            </div>
+        <div className="flex flex-col gap-3 border-t border-line px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted">
+            {records.length > 0 ? `${pageStart}–${pageEnd} von ${records.length} Einträgen` : "0 Einträge"}
+          </p>
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            <button
+              type="button"
+              onClick={goToPrevPage}
+              disabled={currentPage === 1}
+              aria-label="Vorherige Seite"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-line-strong text-body transition hover:border-brand-500 disabled:opacity-40"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="text-xs font-medium text-body">
+              Seite {currentPage} / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={goToNextPage}
+              disabled={currentPage === totalPages}
+              aria-label="Nächste Seite"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-line-strong text-body transition hover:border-brand-500 disabled:opacity-40"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>
 
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0f1b36] p-5 text-white shadow-2xl">
-            <h3 className="text-lg font-bold sm:text-xl">Stempel hinzufügen</h3>
-
-            <form onSubmit={handleAddRecord} className="mt-4 space-y-3.5">
+      {showAddModal &&
+        Modal({
+          title: "Stempel hinzufügen",
+          onClose: closeAddModal,
+          onSubmit: handleAddRecord,
+          children: (
+            <>
               <div>
-                <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/60">
+                <label htmlFor="add-user" className="label">
                   Mitarbeiter
                 </label>
-                <select
-                  value={addUserId}
-                  onChange={(e) => setAddUserId(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-white/10 bg-[#0f1b36] px-3 text-sm text-white outline-none transition focus:border-white/20"
-                  required
-                >
-                  <option value="" className="bg-[#0f1b36] text-white">
-                    Bitte auswählen
-                  </option>
+                <select id="add-user" value={addUserId} onChange={(e) => setAddUserId(e.target.value)} className={selectCls} required>
+                  <option value="">Bitte auswählen</option>
                   {users.map((user) => (
-                    <option
-                      key={user._id}
-                      value={user._id}
-                      className="bg-[#0f1b36] text-white"
-                    >
+                    <option key={user._id} value={user._id}>
                       {user.name}
                     </option>
                   ))}
                 </select>
               </div>
-
+              {actionFields(addAction, setAddAction)}
               <div>
-                <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/60">
-                  Aktion
-                </label>
-                <select
-                  value={addAction}
-                  onChange={(e) => setAddAction(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-white/10 bg-[#0f1b36] px-3 text-sm text-white outline-none transition focus:border-white/20"
-                >
-                  <option value="in" className="bg-[#0f1b36] text-white">
-                    EIN
-                  </option>
-                  <option value="out" className="bg-[#0f1b36] text-white">
-                    AUS
-                  </option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/60">
-                  Datum & Uhrzeit
+                <label htmlFor="add-ts" className="label">
+                  Datum &amp; Uhrzeit
                 </label>
                 <input
+                  id="add-ts"
                   type="datetime-local"
                   value={addTimestamp}
                   onChange={(e) => setAddTimestamp(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-white/10 bg-[#0f1b36] px-3 text-sm text-white outline-none transition focus:border-white/20"
+                  className={selectCls}
                   required
                 />
               </div>
+            </>
+          ),
+        })}
 
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="submit"
-                  className="h-10 flex-1 rounded-xl px-3 text-sm font-medium text-white"
-                  style={{ background: "var(--ac-gradient-primary)" }}
-                >
-                  Speichern
-                </button>
-
-                <button
-                  type="button"
-                  onClick={closeAddModal}
-                  className="h-10 flex-1 rounded-xl border border-white/10 bg-[#0f1b36] px-3 text-sm font-medium text-white transition hover:bg-white/10"
-                >
-                  Abbrechen
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {editingRecord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0f1b36] p-5 text-white shadow-2xl">
-            <h3 className="text-lg font-bold sm:text-xl">Eintrag bearbeiten</h3>
-
-            <form onSubmit={handleSaveEdit} className="mt-4 space-y-3.5">
+      {editingRecord &&
+        Modal({
+          title: "Eintrag bearbeiten",
+          onClose: closeEdit,
+          onSubmit: handleSaveEdit,
+          children: (
+            <>
+              <p className="text-sm text-muted">
+                Mitarbeiter: <span className="font-semibold text-ink">{editingRecord.userName}</span>
+              </p>
+              {actionFields(editAction, setEditAction)}
               <div>
-                <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/60">
-                  Aktion
-                </label>
-                <select
-                  value={editAction}
-                  onChange={(e) => setEditAction(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-white/10 bg-[#0f1b36] px-3 text-sm text-white outline-none transition focus:border-white/20"
-                >
-                  <option value="in" className="bg-[#0f1b36] text-white">
-                    EIN
-                  </option>
-                  <option value="out" className="bg-[#0f1b36] text-white">
-                    AUS
-                  </option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/60">
-                  Datum & Uhrzeit
+                <label htmlFor="edit-ts" className="label">
+                  Datum &amp; Uhrzeit
                 </label>
                 <input
+                  id="edit-ts"
                   type="datetime-local"
                   value={editTimestamp}
                   onChange={(e) => setEditTimestamp(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-white/10 bg-[#0f1b36] px-3 text-sm text-white outline-none transition focus:border-white/20"
+                  className={selectCls}
                   required
                 />
               </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="submit"
-                  className="h-10 flex-1 rounded-xl px-3 text-sm font-medium text-white"
-                  style={{ background: "var(--ac-gradient-primary)" }}
-                >
-                  Speichern
-                </button>
-
-                <button
-                  type="button"
-                  onClick={closeEdit}
-                  className="h-10 flex-1 rounded-xl border border-white/10 bg-[#0f1b36] px-3 text-sm font-medium text-white transition hover:bg-white/10"
-                >
-                  Abbrechen
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </>
+          ),
+        })}
     </div>
   );
 }

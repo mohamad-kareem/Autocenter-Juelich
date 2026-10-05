@@ -1,5 +1,8 @@
 export const runtime = "nodejs";
 import nodemailer from "nodemailer";
+import dbConnect from "@/lib/mongodb";
+import ContactMessage from "@/app/models/ContactMessage";
+import { SITE } from "@/lib/site";
 
 const ALLOWED_SUBJECTS = new Set([
   "Allgemeine Anfrage",
@@ -11,21 +14,42 @@ const ALLOWED_SUBJECTS = new Set([
 
 // ✅ Receivers
 const CONTACT_TO = "info@autocenter-juelich.de";
-const CONTACT_CC = [
-  "j.alawie@autocenter-juelich.de",
-  "h.alawie@autocenter-juelich.de",
-];
+const CONTACT_CC = ["mohamadkareemeng@gmail.com"];
+
+/** Very light spam guard: honeypot field + minimum message length. */
+function looksLikeSpam(body, message) {
+  if (String(body?.website || "").trim()) return true; // honeypot
+  if (message.length < 10) return true;
+  return false;
+}
 
 export async function POST(req) {
+  let saved = null;
+
   try {
     const body = await req.json();
 
     // ---- sanitize inputs
-    const name = String(body?.name || "").trim();
-    const email = String(body?.email || "").trim();
-    const phone = String(body?.phone || "").trim();
+    const name = String(body?.name || "")
+      .trim()
+      .slice(0, 120);
+    const email = String(body?.email || "")
+      .trim()
+      .slice(0, 160);
+    const phone = String(body?.phone || "")
+      .trim()
+      .slice(0, 60);
     const subjectRaw = String(body?.subject || "").trim();
-    const message = String(body?.message || "").trim();
+    const message = String(body?.message || "")
+      .trim()
+      .slice(0, 5000);
+    const vehicle = String(body?.vehicle || "")
+      .trim()
+      .slice(0, 200);
+    const vehicleId = String(body?.vehicleId || "")
+      .replace(/[^A-Za-z0-9_-]/g, "")
+      .slice(0, 40);
+    const vehicleUrl = vehicleId ? `${SITE.url}/fahrzeuge/${vehicleId}` : "";
     const agreement = Boolean(body?.agreement);
 
     // ---- validation
@@ -44,7 +68,35 @@ export async function POST(req) {
       );
     }
 
-    // ---- SMTP env (UDAG / United Domains)
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      return Response.json(
+        { error: "Bitte eine gültige E-Mail-Adresse angeben." },
+        { status: 400 },
+      );
+    }
+
+    if (looksLikeSpam(body, message)) {
+      // Pretend everything is fine – bots should not learn anything.
+      return Response.json({ ok: true });
+    }
+
+    // ---- 1) store the request so it always shows up in the dashboard
+    try {
+      await dbConnect();
+      saved = await ContactMessage.create({
+        name,
+        email,
+        phone,
+        subject,
+        message,
+        vehicle,
+        vehicleId,
+      });
+    } catch (dbErr) {
+      console.error("CONTACT_DB_ERROR:", dbErr?.message || dbErr);
+    }
+
+    // ---- 2) send the notification e-mail
     const SMTP_HOST = process.env.SMTP_HOST || "smtps.udag.de";
     const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
     const SMTP_USER = String(process.env.SMTP_USER || "").trim();
@@ -54,10 +106,19 @@ export async function POST(req) {
     ).trim();
 
     if (!SMTP_USER || !SMTP_PASS) {
-      return Response.json(
-        { error: "SMTP env vars fehlen (SMTP_USER / SMTP_PASS)." },
-        { status: 500 },
-      );
+      const reason = "SMTP env vars fehlen (SMTP_USER / SMTP_PASS).";
+      console.error("CONTACT_SMTP_CONFIG:", reason);
+      await markEmail(saved, false, reason);
+
+      // The message is stored, so the customer should not see an error.
+      return saved
+        ? Response.json({ ok: true, emailSent: false })
+        : Response.json(
+            {
+              error: "Serverfehler beim Senden. Bitte später erneut versuchen.",
+            },
+            { status: 500 },
+          );
     }
 
     // ✅ 465 = SSL/TLS, 587 = STARTTLS
@@ -105,6 +166,15 @@ export async function POST(req) {
               : ""
           }
           <p style="margin:6px 0"><b>Betreff:</b> ${escapeHtml(subject)}</p>
+          ${
+            vehicle
+              ? `<p style="margin:6px 0"><b>Fahrzeug:</b> ${escapeHtml(vehicle)}${
+                  vehicleUrl
+                    ? ` – <a href="${escapeHtml(vehicleUrl)}" style="color:#1b56e8">Fahrzeug ansehen</a>`
+                    : ""
+                }</p>`
+              : ""
+          }
         </div>
         <div style="margin-top:14px">
           <p style="margin:0 0 8px 0"><b>Nachricht:</b></p>
@@ -112,6 +182,9 @@ export async function POST(req) {
             ${escapeHtml(message)}
           </div>
         </div>
+        <p style="margin-top:16px;font-size:12px;color:#64748b">
+          Diese Anfrage finden Sie auch im Mitarbeiterbereich unter „Anfragen“.
+        </p>
       </div>
     `;
 
@@ -121,6 +194,8 @@ export async function POST(req) {
       `E-Mail: ${email}`,
       phone ? `Telefon: ${phone}` : "",
       `Betreff: ${subject}`,
+      vehicle ? `Fahrzeug: ${vehicle}` : "",
+      vehicleUrl || "",
       "",
       message,
     ]
@@ -128,23 +203,53 @@ export async function POST(req) {
       .join("\n");
 
     // ---- send (to 3 emails)
-    await transporter.sendMail({
-      from: SMTP_FROM,
-      to: CONTACT_TO,
-      cc: CONTACT_CC,
-      replyTo: email, // so "Reply" goes to the customer
-      subject: subject,
-      html,
-      text,
-    });
+    try {
+      await transporter.sendMail({
+        from: SMTP_FROM,
+        to: CONTACT_TO,
+        cc: CONTACT_CC,
+        replyTo: email, // so "Reply" goes to the customer
+        subject: vehicle ? `${subject} – ${vehicle}` : subject,
+        html,
+        text,
+      });
+      await markEmail(saved, true, "");
+    } catch (mailErr) {
+      console.error("CONTACT_SMTP_ERROR:", mailErr);
+      await markEmail(
+        saved,
+        false,
+        String(mailErr?.message || mailErr).slice(0, 300),
+      );
 
-    return Response.json({ ok: true });
+      if (!saved) {
+        return Response.json(
+          { error: "Serverfehler beim Senden. Bitte später erneut versuchen." },
+          { status: 500 },
+        );
+      }
+      // Stored in the dashboard – the customer gets a success message.
+      return Response.json({ ok: true, emailSent: false });
+    }
+
+    return Response.json({ ok: true, emailSent: true });
   } catch (err) {
-    console.error("CONTACT_SMTP_ERROR:", err); // ✅ check Vercel Function logs
+    console.error("CONTACT_ERROR:", err);
     return Response.json(
       { error: "Serverfehler beim Senden. Bitte später erneut versuchen." },
       { status: 500 },
     );
+  }
+}
+
+async function markEmail(doc, sent, error) {
+  if (!doc) return;
+  try {
+    doc.emailSent = sent;
+    doc.emailError = error;
+    await doc.save();
+  } catch (err) {
+    console.error("CONTACT_DB_UPDATE_ERROR:", err?.message || err);
   }
 }
 

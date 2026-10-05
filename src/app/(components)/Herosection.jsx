@@ -1,265 +1,302 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, ChevronDown } from "lucide-react";
+import { ArrowRight, Search, Star } from "lucide-react";
+import { PRICE_STEPS, formatNumber, fuelLabel, prettyBrand } from "@/lib/cars";
+import { SITE } from "@/lib/site";
 
 const cx = (...c) => c.filter(Boolean).join(" ");
 
-export default function HeroSectionWithSearch({ brands = [] }) {
+const FALLBACK_SLIDES = [
+  {
+    src: "/hero-showroom.jpg",
+    alt: "Showroom von Autocenter Jülich mit Gebrauchtwagen",
+    position: "object-[center_55%]",
+  },
+  {
+    src: "/center.jpg",
+    alt: "Showroom von Autocenter Jülich mit Verkauf und Finanzierung",
+    position: "object-[center_40%]",
+  },
+  {
+    src: "/center2.jpeg",
+    alt: "Gebrauchtwagen im Showroom von Autocenter Jülich",
+    position: "object-[center_60%]",
+  },
+];
+
+/**
+ * Full-bleed hero with crossfading showroom photos and a floating quick search.
+ * @param {{ cars: Array<{brand:string, price:number, year:number|null, fuel:string|null}>, rating?: {rating:number, count:number} }} props
+ */
+export default function HeroSectionWithSearch({ cars = [], rating, slides }) {
   const router = useRouter();
-
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const autoplayInterval = useRef(null);
-
-  const [brand, setBrand] = useState("ALL");
-  const [maxPrice, setMaxPrice] = useState("ANY");
-
-  const heroSlides = useMemo(
-    () => [
-      {
-        id: 1,
-        title: "Premium Fahrzeuge",
-        subtitle: "Flexibel & schnell",
-        description: "Individuelle Raten, fair, transparent und unkompliziert.",
-        image: "/center2.jpeg",
-      },
-      {
-        id: 2,
-        title: "Top Konditionen",
-        subtitle: "Wir finden das passende Angebot",
-        description: "Persönliche Beratung, klare Abläufe und starke Lösungen.",
-        image: "/center.jpg",
-      },
-    ],
-    [],
-  );
-
-  const stopAutoplay = () => {
-    if (autoplayInterval.current) clearInterval(autoplayInterval.current);
-  };
-
-  const startAutoplay = () => {
-    stopAutoplay();
-    autoplayInterval.current = setInterval(() => {
-      setCurrentSlide((prev) =>
-        prev === heroSlides.length - 1 ? 0 : prev + 1,
-      );
-    }, 9000);
-  };
+  const SLIDES = slides?.length ? slides : FALLBACK_SLIDES;
+  const [slide, setSlide] = useState(0);
+  const [brand, setBrand] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [yearFrom, setYearFrom] = useState("");
+  const [fuel, setFuel] = useState("");
 
   useEffect(() => {
-    startAutoplay();
-    return stopAutoplay;
-  }, []);
+    if (SLIDES.length < 2) return;
+    const t = setInterval(() => setSlide((s) => (s + 1) % SLIDES.length), 8000);
+    return () => clearInterval(t);
+  }, [SLIDES.length]);
 
-  const goToSlide = (index) => {
-    setCurrentSlide(index);
-    startAutoplay();
-  };
+  const brands = useMemo(() => {
+    const counts = new Map();
+    for (const c of cars)
+      if (c.brand) counts.set(c.brand, (counts.get(c.brand) || 0) + 1);
+    return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0], "de"));
+  }, [cars]);
 
-  const handleSearch = (e) => {
+  const fuels = useMemo(
+    () => [...new Set(cars.map((c) => c.fuel).filter(Boolean))].sort(),
+    [cars],
+  );
+
+  const years = useMemo(() => {
+    const ys = cars.map((c) => c.year).filter(Boolean);
+    if (!ys.length) return [];
+    const min = Math.min(...ys);
+    const max = Math.max(...ys);
+    return Array.from({ length: max - min + 1 }, (_, i) => max - i);
+  }, [cars]);
+
+  const matchCount = useMemo(
+    () =>
+      cars.filter(
+        (c) =>
+          (!brand || c.brand === brand) &&
+          (!maxPrice || c.price <= Number(maxPrice)) &&
+          (!yearFrom || (c.year && c.year >= Number(yearFrom))) &&
+          (!fuel || c.fuel === fuel),
+      ).length,
+    [cars, brand, maxPrice, yearFrom, fuel],
+  );
+
+  function submit(e) {
     e.preventDefault();
+    const p = new URLSearchParams();
+    if (brand) p.set("brand", brand);
+    if (maxPrice) p.set("max", maxPrice);
+    if (yearFrom) p.set("yf", yearFrom);
+    if (fuel) p.set("fuel", fuel);
+    const qs = p.toString();
+    router.push(`/fahrzeuge${qs ? `?${qs}` : ""}`);
+  }
 
-    const params = new URLSearchParams();
-
-    if (brand !== "ALL") params.set("brand", brand);
-    if (maxPrice !== "ANY") params.set("max", maxPrice);
-
-    router.push(`/fahrzeuge${params.toString() ? `?${params}` : ""}`);
-  };
+  const ratingValue = rating?.rating ?? SITE.googleRatingFallback.rating;
+  const ratingCount = rating?.count ?? SITE.googleRatingFallback.count;
 
   return (
-    <section className="relative overflow-hidden">
-      {/* Shared glow */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(circle_at_50%_0%,rgba(42,107,255,0.14),transparent_60%)]" />
-      <div className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[42rem] -translate-x-1/2 rounded-full bg-[rgba(42,107,255,0.18)] blur-[90px]" />
+    <section className="relative">
+      {/* Image stage */}
+      <div className="relative isolate overflow-hidden bg-navy-950">
+        {SLIDES.map((s, i) => (
+          <div
+            key={s.src}
+            className={cx(
+              "absolute inset-0 -z-20 transition-opacity duration-[1500ms]",
+              i === slide ? "opacity-100" : "opacity-0",
+            )}
+            aria-hidden={i !== slide}
+          >
+            <Image
+              src={s.src}
+              alt={s.alt}
+              fill
+              priority={i === 0}
+              sizes="100vw"
+              unoptimized={String(s.src).startsWith("/api/")}
+              className={cx(
+                "object-cover",
+                s.position,
+                i === slide && "animate-kenburns",
+              )}
+            />
+          </div>
+        ))}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy-950/92 via-navy-950/60 to-navy-950/10" />
+        <div className="absolute inset-x-0 top-0 -z-10 h-32 bg-gradient-to-b from-navy-950/75 to-transparent" />
 
-      {/* HERO FULL WIDTH */}
-      <div className="w-full ">
-        <div className="relative overflow-hidden  border-white/10 bg-[rgba(10,20,45,0.28)] shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
-          <div className="relative h-[24rem] sm:h-[27rem] md:h-[38rem] lg:h-[40rem]">
-            {heroSlides.map((s, index) => (
-              <div
-                key={s.id}
-                className={cx(
-                  "absolute inset-0 transition-opacity duration-1000",
-                  index === currentSlide
-                    ? "pointer-events-auto z-10 opacity-100"
-                    : "pointer-events-none z-0 opacity-0",
-                )}
-                aria-hidden={index !== currentSlide}
+        <div className="container-ac flex min-h-[580px] flex-col justify-center pb-36 pt-28 sm:min-h-[660px] lg:min-h-[730px] lg:pb-40 lg:pt-32">
+          <div className="max-w-2xl animate-fade-up">
+            <a
+              href="#bewertungen"
+              className="group inline-flex items-center gap-2 text-[13px] text-white/70 transition hover:text-white"
+            >
+              <span className="flex">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <Star key={i} className="h-3.5 w-3.5 fill-star text-star" />
+                ))}
+              </span>
+              <span>
+                <span className="font-semibold text-white">
+                  {ratingValue.toFixed(1).replace(".", ",")}
+                </span>
+                {" von 5 · "}
+                Google-Bewertungen
+              </span>
+            </a>
+
+            <h1 className="font-display mt-5 text-[40px] leading-[1.05] text-white sm:text-[52px] lg:text-[64px]">
+              Ihr nächstes Auto.
+              <br />
+              <span className="text-white/55">Geprüft in Jülich.</span>
+            </h1>
+            <p className="mt-5 max-w-md text-[15px] leading-relaxed text-white/70">
+              Ausgewählte Gebrauchtwagen, faire Finanzierung und CarGarantie® –
+              persönlich im Showroom.
+            </p>
+
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link
+                href="/fahrzeuge"
+                className="inline-flex h-12 items-center rounded-full bg-white px-6 text-sm font-semibold text-navy-900 transition hover:bg-accent-300"
               >
-                <div className="absolute inset-0">
-                  <Image
-                    src={s.image}
-                    alt={s.title}
-                    fill
-                    priority={index === 0}
-                    className="object-cover object-center"
-                    sizes="100vw"
-                  />
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(42,107,255,0.22),transparent_45%),linear-gradient(to_right,rgba(4,7,17,0.90),rgba(7,10,26,0.68),rgba(4,7,17,0.30)),linear-gradient(to_bottom,rgba(10,15,38,0.22),transparent_52%,rgba(4,7,17,0.84))]" />
-                </div>
-
-                <div className="relative flex h-full items-center">
-                  <div className="mx-auto w-full max-w-6xl px-5 sm:px-6">
-                    <div className="max-w-xl md:max-w-2xl">
-                      <p className="mb-3 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.22em] text-[var(--ac-blue-light)]">
-                        AutoCenter Jülich
-                      </p>
-
-                      <h1
-                        className="text-3xl sm:text-4xl md:text-6xl font-semibold leading-[1.04] text-white"
-                        style={{
-                          fontFamily:
-                            'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
-                        }}
-                      >
-                        {s.title}
-                      </h1>
-
-                      <p className="mt-3 text-sm sm:text-base md:text-lg font-medium text-white/90">
-                        {s.subtitle}
-                      </p>
-
-                      <p className="mt-4 hidden max-w-xl text-xs leading-relaxed text-white/78 sm:block sm:text-sm md:text-base">
-                        {s.description}
-                      </p>
-
-                      <div className="mt-7 flex flex-wrap gap-3">
-                        <Link
-                          href="/fahrzeuge"
-                          className="ac-btn-primary inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm sm:px-6 sm:text-base font-semibold"
-                        >
-                          Fahrzeuge ansehen
-                        </Link>
-
-                        <Link
-                          href="/kontakt"
-                          className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm sm:px-6 sm:text-base font-semibold text-white transition hover:bg-white/10"
-                        >
-                          Kontakt
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {/* Indicators */}
-            <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 gap-2">
-              {heroSlides.map((_, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => goToSlide(index)}
-                  className={cx(
-                    "h-2.5 rounded-full transition-all duration-300",
-                    index === currentSlide
-                      ? "w-9 bg-gradient-to-r from-[#1a5ae6] to-[#2a6bff]"
-                      : "w-2.5 bg-white/25 hover:bg-white/45",
-                  )}
-                  aria-label={`Gehe zu Folie ${index + 1}`}
-                />
-              ))}
+                {cars.length
+                  ? `${cars.length} Fahrzeuge ansehen`
+                  : "Fahrzeuge ansehen"}
+              </Link>
+              <Link
+                href="/kontakt?betreff=Probefahrt%20vereinbaren"
+                className="inline-flex h-12 items-center rounded-full border border-white/25 px-6 text-sm font-medium text-white transition hover:border-white/50 hover:bg-white/5"
+              >
+                Probefahrt anfragen
+              </Link>
             </div>
+          </div>
+
+          {/* Slide dots */}
+          <div className="absolute bottom-28 left-1/2 flex -translate-x-1/2 gap-1.5 lg:bottom-32">
+            {SLIDES.length > 1
+              ? SLIDES.map((s, i) => (
+                  <button
+                    key={s.src}
+                    type="button"
+                    onClick={() => setSlide(i)}
+                    aria-label={`Bild ${i + 1}`}
+                    className={cx(
+                      "h-1.5 rounded-full transition-all",
+                      i === slide
+                        ? "w-6 bg-white"
+                        : "w-1.5 bg-white/40 hover:bg-white/70",
+                    )}
+                  />
+                ))
+              : null}
           </div>
         </div>
       </div>
 
-      {/* SEARCH PANEL */}
-      <div className="relative z-20 -mt-10 px-2 sm:-mt-14 sm:px-4">
-        <div className="mx-auto max-w-6xl">
-          <div className="rounded-[1.6rem] border border-white/10 bg-[rgba(10,20,45,0.72)] backdrop-blur-xl shadow-[0_24px_60px_rgba(0,0,0,0.34)]">
-            <div className="p-4 sm:p-5 md:p-6">
-              <div>
-                <h3 className="text-base sm:text-lg md:text-xl font-semibold text-white">
-                  Gebrauchtwagen finden
-                </h3>
-                <p className="mt-1 text-[11px] sm:text-xs text-white/50">
-                  Marke wählen, Budget festlegen.
-                </p>
-              </div>
-
-              <form
-                onSubmit={handleSearch}
-                className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3 items-end"
+      {/* Floating search panel */}
+      <div className="container-ac relative z-10 -mt-24 lg:-mt-24">
+        <form
+          onSubmit={submit}
+          className="rounded-xl bg-white p-3 shadow-[0_20px_50px_-12px_rgba(6,15,29,0.35)] ring-1 ring-black/5 sm:p-4"
+        >
+          <div className="mb-3 flex items-center justify-between">
+            <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <Search className="h-4 w-4 text-brand-600" />
+              Fahrzeug finden
+            </p>
+            <Link
+              href="/fahrzeuge"
+              className="link hidden items-center gap-0.5 text-xs sm:inline-flex"
+            >
+              Erweiterte Suche
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-[1.3fr_1fr_1fr_1fr_auto]">
+            <div className="col-span-2 lg:col-span-1">
+              <label htmlFor="hs-brand" className="label">
+                Marke
+              </label>
+              <select
+                id="hs-brand"
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                className="field"
               >
-                <div>
-                  <label className="mb-1.5 block text-[11px] sm:text-xs font-medium text-white/60">
-                    Marke
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={brand}
-                      onChange={(e) => setBrand(e.target.value)}
-                      className="w-full appearance-none rounded-xl border border-white/10 bg-[rgba(255,255,255,0.05)] px-3.5 py-3 pr-10 text-sm text-white outline-none transition focus:border-[rgba(42,107,255,0.6)]"
-                    >
-                      <option value="ALL" className="bg-[#0a0f26] text-white">
-                        Alle
-                      </option>
-                      {brands.map((b) => (
-                        <option
-                          key={b}
-                          value={b}
-                          className="bg-[#0a0f26] text-white"
-                        >
-                          {b}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-[11px] sm:text-xs font-medium text-white/60">
-                    Budget bis
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={maxPrice}
-                      onChange={(e) => setMaxPrice(e.target.value)}
-                      className="w-full appearance-none rounded-xl border border-white/10 bg-[rgba(255,255,255,0.05)] px-3.5 py-3 pr-10 text-sm text-white outline-none transition focus:border-[rgba(42,107,255,0.6)]"
-                    >
-                      <option value="ANY" className="bg-[#0a0f26] text-white">
-                        Beliebig
-                      </option>
-                      <option value="3000" className="bg-[#0a0f26] text-white">
-                        3.000 €
-                      </option>
-                      <option value="5000" className="bg-[#0a0f26] text-white">
-                        5.000 €
-                      </option>
-                      <option value="10000" className="bg-[#0a0f26] text-white">
-                        10.000 €
-                      </option>
-                      <option value="15000" className="bg-[#0a0f26] text-white">
-                        15.000 €
-                      </option>
-                      <option value="20000" className="bg-[#0a0f26] text-white">
-                        20.000 €
-                      </option>
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55" />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="ac-btn-primary flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm sm:text-base font-semibold"
-                >
-                  <Search className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span>Suchen</span>
-                </button>
-              </form>
+                <option value="">Alle Marken</option>
+                {brands.map(([b, n]) => (
+                  <option key={b} value={b}>
+                    {prettyBrand(b)} ({n})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="hs-price" className="label">
+                Preis bis
+              </label>
+              <select
+                id="hs-price"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                className="field"
+              >
+                <option value="">Beliebig</option>
+                {PRICE_STEPS.map((p) => (
+                  <option key={p} value={p}>
+                    {formatNumber(p)} €
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="hs-year" className="label">
+                Erstzulassung ab
+              </label>
+              <select
+                id="hs-year"
+                value={yearFrom}
+                onChange={(e) => setYearFrom(e.target.value)}
+                className="field"
+              >
+                <option value="">Beliebig</option>
+                {years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+              <label htmlFor="hs-fuel" className="label">
+                Kraftstoff
+              </label>
+              <select
+                id="hs-fuel"
+                value={fuel}
+                onChange={(e) => setFuel(e.target.value)}
+                className="field"
+              >
+                <option value="">Beliebig</option>
+                {fuels.map((f) => (
+                  <option key={f} value={f}>
+                    {fuelLabel(f)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-span-2 flex items-end sm:col-span-1">
+              <button
+                type="submit"
+                className="btn btn-primary w-full lg:w-auto lg:min-w-44"
+              >
+                <Search className="h-4 w-4" />
+                {matchCount} {matchCount === 1 ? "Angebot" : "Angebote"}
+              </button>
             </div>
           </div>
-        </div>
+        </form>
       </div>
     </section>
   );

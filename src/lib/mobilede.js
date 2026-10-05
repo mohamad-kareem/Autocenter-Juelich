@@ -1,5 +1,6 @@
 // lib/mobilede.js
-const BASE_URL = "https://services.mobile.de";
+import { unstable_rethrow } from "next/navigation";
+const BASE_URL = process.env.MOBILEDE_BASE_URL || "https://services.mobile.de";
 
 function getAuthHeader() {
   const user = process.env.MOBILEDE_USERNAME;
@@ -23,7 +24,7 @@ function getSellerId() {
  * Fetch all ads for the seller.
  * NOTE: This can be a lot. For production you may want pagination if supported by your account/endpoints.
  */
-export async function fetchSellerAds() {
+export async function fetchSellerAds({ revalidate } = {}) {
   const sellerId = getSellerId();
 
   const res = await fetch(`${BASE_URL}/seller-api/sellers/${sellerId}/ads`, {
@@ -35,8 +36,9 @@ export async function fetchSellerAds() {
     // change caching to your preference:
     // - "no-store" for always fresh
     // - or revalidate for better performance
-    cache: "no-store",
-    // next: { revalidate: 60 }, // alternative: cache 60s
+    ...(revalidate
+      ? { next: { revalidate } }
+      : { cache: "no-store" }),
   });
 
   if (!res.ok) {
@@ -131,8 +133,23 @@ export function mapAdToUiCar(ad) {
     gearbox: ad?.gearbox || null,
     power: powerPs,
     location: "Jülich",
-    images: images.length ? images : ["/placeholder-car.jpg"],
+    images: images.length ? images : ["/placeholder-car.svg"],
     isSold: Boolean(ad?.reserved) === true,
     raw: ad,
   };
+}
+
+/**
+ * Never-throwing helper for pages: returns [] (and logs) when mobile.de
+ * is unreachable or credentials are missing, so the website still renders.
+ */
+export async function getCarsSafe(options) {
+  try {
+    const ads = await fetchSellerAds(options);
+    return ads.map(mapAdToUiCar);
+  } catch (err) {
+    unstable_rethrow(err);
+    console.error("MOBILEDE_FETCH_ERROR:", err?.message || err);
+    return [];
+  }
 }

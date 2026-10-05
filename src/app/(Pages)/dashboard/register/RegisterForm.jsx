@@ -1,32 +1,22 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { Loader2, UserPlus } from "lucide-react";
 
 const PASSWORD_RULE = /^(?=.*[!@#$%^&*()_\-+=[\]{};':"\\|,.<>/?`~]).{6,}$/;
 
 export default function RegisterForm() {
   const router = useRouter();
 
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: "user",
-  });
-
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "user" });
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [ok, setOk] = useState(null);
 
   function handleChange(e) {
     const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   }
 
   async function handleSubmit(e) {
@@ -39,9 +29,7 @@ export default function RegisterForm() {
 
     if (!PASSWORD_RULE.test(password)) {
       setOk(false);
-      setMsg(
-        "Das Passwort muss mindestens 6 Zeichen lang sein und mindestens ein Sonderzeichen enthalten.",
-      );
+      setMsg("Das Passwort muss mindestens 6 Zeichen lang sein und mindestens ein Sonderzeichen enthalten.");
       setLoading(false);
       return;
     }
@@ -49,15 +37,9 @@ export default function RegisterForm() {
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...form,
-          password,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, password }),
       });
-
       const data = await res.json();
 
       if (!res.ok) {
@@ -68,16 +50,9 @@ export default function RegisterForm() {
 
       setOk(true);
       setMsg("Benutzer wurde erfolgreich erstellt.");
-
-      setForm({
-        name: "",
-        email: "",
-        password: "",
-        role: "user",
-      });
-
+      setForm({ name: "", email: "", password: "", role: "user" });
       router.refresh();
-    } catch (error) {
+    } catch {
       setOk(false);
       setMsg("Etwas ist schiefgelaufen.");
     } finally {
@@ -86,98 +61,86 @@ export default function RegisterForm() {
   }
 
   return (
-    <div className="min-h-screen ac-page px-4 py-12">
-      <div className="mx-auto w-full max-w-md">
-        <Link
-          href="/dashboard"
-          className="mb-4 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/90 transition hover:bg-white/10"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Zurück zum Dashboard
-        </Link>
+    <div className="mx-auto max-w-xl">
+      <div className="card p-5">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+            <UserPlus className="h-5 w-5" />
+          </span>
+          <div>
+            <h1 className="text-2xl font-bold">Benutzer erstellen</h1>
+            <p className="text-sm text-muted">Nur Administratoren können neue Konten anlegen.</p>
+          </div>
+        </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md sm:p-8">
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">
-            Benutzer erstellen
-          </h1>
+        <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+          <div>
+            <label htmlFor="name" className="label">
+              Vollständiger Name
+            </label>
+            <input id="name" name="name" type="text" value={form.name} onChange={handleChange} className="field" required />
+          </div>
 
-          <p className="mt-2 text-sm text-white/70">
-            Nur Administratoren können neue Benutzer oder Administratoren
-            erstellen.
-          </p>
+          <div>
+            <label htmlFor="email" className="label">
+              E-Mail-Adresse
+            </label>
+            <input id="email" name="email" type="email" value={form.email} onChange={handleChange} className="field" required />
+          </div>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <div>
+            <label htmlFor="password" className="label">
+              Passwort
+            </label>
             <input
-              name="name"
-              type="text"
-              placeholder="Vollständiger Name"
-              value={form.name}
-              onChange={handleChange}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/40"
-              required
-            />
-
-            <input
-              name="email"
-              type="email"
-              placeholder="E-Mail-Adresse"
-              value={form.email}
-              onChange={handleChange}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/40"
-              required
-            />
-
-            <input
+              id="password"
               name="password"
               type="password"
-              placeholder="Passwort"
+              autoComplete="new-password"
               value={form.password}
               onChange={handleChange}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/40"
+              className="field"
               required
             />
+            <p className="mt-1.5 text-xs text-muted">Mindestens 6 Zeichen und ein Sonderzeichen.</p>
+          </div>
 
-            <p className="text-xs text-white/50">
-              Das Passwort muss mindestens 6 Zeichen lang sein und ein
-              Sonderzeichen enthalten.
-            </p>
+          <div>
+            <span className="label">Rolle</span>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                ["user", "Mitarbeiter"],
+                ["admin", "Administrator"],
+              ].map(([value, label]) => (
+                <label
+                  key={value}
+                  className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-4 py-3 text-[15px] font-medium transition ${
+                    form.role === value ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line-strong text-body hover:border-brand-500"
+                  }`}
+                >
+                  <input type="radio" name="role" value={value} checked={form.role === value} onChange={handleChange} />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
 
-            <select
-              name="role"
-              value={form.role}
-              onChange={handleChange}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
+          <button type="submit" disabled={loading} className="btn btn-primary btn-lg w-full">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {loading ? "Wird erstellt …" : "Konto erstellen"}
+          </button>
+
+          {msg ? (
+            <div
+              role="status"
+              className={`rounded-xl border px-4 py-3 text-sm ${
+                ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"
+              }`}
             >
-              <option value="user" className="text-black">
-                Benutzer
-              </option>
-              <option value="admin" className="text-black">
-                Administrator
-              </option>
-            </select>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-xl px-4 py-3 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60"
-              style={{ background: "var(--ac-gradient-primary)" }}
-            >
-              {loading ? "Wird erstellt..." : "Konto erstellen"}
-            </button>
-
-            {msg ? (
-              <div
-                className={`rounded-xl border px-4 py-3 text-sm ${
-                  ok
-                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-                    : "border-red-500/20 bg-red-500/10 text-red-300"
-                }`}
-              >
-                {msg}
-              </div>
-            ) : null}
-          </form>
-        </div>
+              {msg}
+            </div>
+          ) : null}
+        </form>
       </div>
     </div>
   );

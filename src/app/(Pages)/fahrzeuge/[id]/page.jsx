@@ -1,17 +1,34 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
+import {
+  ArrowLeft,
+  BadgeCheck,
+  Calendar,
+  Check,
+  ChevronRight,
+  Cog,
+  Fuel,
+  Gauge,
+  Mail,
+  MapPin,
+  Phone,
+  ShieldCheck,
+  Star,
+  Wallet,
+  Wrench,
+  Zap,
+} from "lucide-react";
 import ImageSlider from "./ImageSlider";
-import { fetchSingleAd, fetchSellerAds } from "@/lib/mobilede";
+import CarCard from "@/app/(components)/CarCard";
+import { fetchSingleAd, getCarsSafe, mapAdToUiCar } from "@/lib/mobilede";
+import { formatKm, formatPrice, prettyBrand, toCardCar } from "@/lib/cars";
+import { SITE } from "@/lib/site";
 
-const formatPrice = (n) =>
-  new Intl.NumberFormat("de-DE").format(Number(n || 0));
-const formatKm = (n) => new Intl.NumberFormat("de-DE").format(Number(n || 0));
+/* ----------------------------- helpers ----------------------------- */
 
 function formatYYYYMM(yyyymm) {
   if (!yyyymm || typeof yyyymm !== "string" || yyyymm.length !== 6) return null;
-  const y = yyyymm.slice(0, 4);
-  const m = yyyymm.slice(4, 6);
-  return `${m}/${y}`;
+  return `${yyyymm.slice(4, 6)}/${yyyymm.slice(0, 4)}`;
 }
 
 function kwToPs(kw) {
@@ -33,265 +50,201 @@ function isNonEmpty(v) {
   return true;
 }
 
-function enumLabel(value, map) {
-  if (!value) return null;
-  return map[value] || value;
-}
-
-function buildField(label, value) {
-  if (!isNonEmpty(value)) return null;
-  return { label, value: String(value) };
-}
-
-/**
- * Keep titles short:
- * "DACIA Sandero III Stepway*wenig km*Allwetter*Extras"
- * -> "DACIA Sandero III Stepway"
- */
-function firstWords(text, count = 4) {
-  const clean = String(text || "")
-    .replace(/\*/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!clean) return "";
-  return clean.split(" ").slice(0, count).join(" ");
-}
+const enumLabel = (value, map) => (value ? map[value] || value : null);
+const field = (label, value) => (isNonEmpty(value) ? { label, value: String(value) } : null);
 
 /**
  * mobile.de description uses CREOLE-like tokens:
- * - "\\\\": linebreak
- * - "----": separator line
- * - "* item": bullet
- * - "**bold**": bold
+ * "\\\\" linebreak, "----" separator, "* item" bullet, "**bold**"
  */
 function parseDescription(desc) {
   if (!desc || typeof desc !== "string") return [];
-
-  const text = desc.replaceAll("\\\\", "\n");
-
-  const rawBlocks = text
+  return desc
+    .replaceAll("\\\\", "\n")
     .split(/\n?----+\n?/g)
     .map((b) => b.trim())
-    .filter(Boolean);
-
-  return rawBlocks.map((block) => {
-    const lines = block
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean);
-
-    const bullets = [];
-    const normalLines = [];
-
-    for (const line of lines) {
-      if (line.startsWith("* ")) bullets.push(line.slice(2).trim());
-      else normalLines.push(line);
-    }
-
-    return { normalLines, bullets };
-  });
+    .filter(Boolean)
+    .map((block) => {
+      const lines = block
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean);
+      return {
+        normalLines: lines.filter((l) => !l.startsWith("* ")),
+        bullets: lines.filter((l) => l.startsWith("* ")).map((l) => l.slice(2).trim()),
+      };
+    });
 }
 
 function renderInlineBold(text) {
-  const parts = [];
-  let i = 0;
-
-  while (i < text.length) {
-    const start = text.indexOf("**", i);
-    if (start === -1) {
-      parts.push({ type: "text", value: text.slice(i) });
-      break;
-    }
-    const end = text.indexOf("**", start + 2);
-    if (end === -1) {
-      parts.push({ type: "text", value: text.slice(i) });
-      break;
-    }
-
-    if (start > i) parts.push({ type: "text", value: text.slice(i, start) });
-    parts.push({ type: "bold", value: text.slice(start + 2, end) });
-    i = end + 2;
-  }
-
-  return parts.map((p, idx) =>
-    p.type === "bold" ? (
-      <strong key={idx} className="text-[var(--ac-text)] font-semibold">
-        {p.value}
-      </strong>
-    ) : (
-      <span key={idx}>{p.value}</span>
-    ),
-  );
+  return String(text)
+    .split(/(\*\*[^*]+\*\*)/g)
+    .filter(Boolean)
+    .map((part, i) =>
+      part.startsWith("**") && part.endsWith("**") ? (
+        <strong key={i} className="font-semibold text-ink">
+          {part.slice(2, -2)}
+        </strong>
+      ) : (
+        <span key={i}>{part}</span>
+      ),
+    );
 }
 
-/* -----------------------------
-   Specs UI (LESS space, better)
------------------------------- */
+const GEARBOX = { MANUAL_GEAR: "Schaltgetriebe", AUTOMATIC_GEAR: "Automatik", SEMIAUTOMATIC_GEAR: "Halbautomatik" };
+const FUEL = {
+  PETROL: "Benzin",
+  DIESEL: "Diesel",
+  ELECTRICITY: "Elektro",
+  HYBRID: "Hybrid (Benzin)",
+  HYBRID_DIESEL: "Hybrid (Diesel)",
+  LPG: "Autogas (LPG)",
+  CNG: "Erdgas (CNG)",
+  ETHANOL: "Ethanol",
+  HYDROGENIUM: "Wasserstoff",
+};
+const DOORS = { TWO_OR_THREE: "2/3", FOUR_OR_FIVE: "4/5", SIX_OR_SEVEN: "6/7" };
+const DRIVE = { FRONT: "Frontantrieb", REAR: "Heckantrieb", ALL_WHEEL: "Allrad" };
+const CONDITION = { USED: "Gebraucht", NEW: "Neu" };
+const CATEGORY = {
+  Cabrio: "Cabrio / Roadster",
+  EstateCar: "Kombi",
+  Limousine: "Limousine",
+  OffRoad: "SUV / Geländewagen",
+  SmallCar: "Kleinwagen",
+  SportsCar: "Sportwagen / Coupé",
+  Van: "Van / Kleinbus",
+  OtherCar: "Andere",
+};
 
-function SpecRow({ label, value }) {
+/* ----------------------------- UI bits ----------------------------- */
+
+function SpecGroup({ title, items }) {
+  const clean = (items || []).filter(Boolean);
+  if (!clean.length) return null;
   return (
-    <div className="grid grid-cols-[1fr_auto] items-baseline gap-4 py-2.5 border-b border-white/10 last:border-b-0">
-      <span className="text-[11px] sm:text-xs text-[var(--ac-muted)]">
-        {label}
-      </span>
-      <span className="text-[11px] sm:text-xs font-medium text-[var(--ac-text)] text-right">
-        {value}
-      </span>
+    <div className="mb-4 break-inside-avoid">
+      <h3 className="border-b border-line pb-1.5 text-[13px] font-semibold text-ink">{title}</h3>
+      <dl>
+        {clean.map((it) => (
+          <div key={it.label} className="flex justify-between gap-4 border-b border-line/70 py-1.5 text-[13px] last:border-b-0">
+            <dt className="text-muted">{it.label}</dt>
+            <dd className="text-right font-medium text-ink">{it.value}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }
 
-function SpecSection({ title, items }) {
-  const clean = (items || []).filter(Boolean);
-  if (!clean.length) return null;
-
+function KeyFact({ icon: Icon, label, value }) {
+  if (!value) return null;
   return (
-    <section className="rounded-2xl border border-white/10 bg-[rgba(10,20,45,0.35)] overflow-hidden">
-      <div className="px-4 sm:px-5 py-3 border-b border-white/10">
-        <h2 className="text-sm sm:text-base font-semibold text-[var(--ac-text)]">
-          {title}
-        </h2>
+    <div className="flex items-center gap-2.5 rounded-md bg-canvas px-3 py-2">
+      <Icon className="h-4 w-4 shrink-0 text-navy-700" />
+      <div className="min-w-0">
+        <p className="text-[11px] text-muted">{label}</p>
+        <p className="truncate text-[13px] font-semibold text-ink">{value}</p>
       </div>
-      <div className="px-4 sm:px-5 py-1">
-        {clean.map((it) => (
-          <SpecRow key={it.label} label={it.label} value={it.value} />
-        ))}
-      </div>
-    </section>
+    </div>
   );
 }
 
-/* ---------------------------------------
-   (Optional) If you still need SEO later,
-   keep generateMetadata somewhere else.
-   You asked "no IDs & meta", so removed.
----------------------------------------- */
+/* ------------------------------ page ------------------------------ */
+
+async function loadAd(id) {
+  try {
+    return await fetchSingleAd(id);
+  } catch (err) {
+    unstable_rethrow(err);
+    console.error("MOBILEDE_SINGLE_AD_ERROR:", err?.message || err);
+    return null;
+  }
+}
+
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  const ad = id ? await loadAd(id) : null;
+  if (!ad) return { title: "Fahrzeug nicht gefunden" };
+  const title = toCardCar(mapAdToUiCar(ad)).title;
+  const price = ad?.price?.consumerPriceGross ? ` für ${formatPrice(ad.price.consumerPriceGross)}` : "";
+  return {
+    title,
+    description: `${title}${price} – jetzt bei Autocenter Jülich ansehen, Probefahrt vereinbaren oder Finanzierung anfragen.`,
+    openGraph: { images: ad.images?.[0]?.ref ? [ad.images[0].ref] : undefined },
+  };
+}
 
 export default async function CarDetailPage({ params }) {
   const { id } = await params;
   if (!id) notFound();
 
-  const ad = await fetchSingleAd(id);
+  const ad = await loadAd(id);
   if (!ad) notFound();
 
-  // Images
-  const images = Array.isArray(ad.images)
-    ? ad.images.map((i) => i?.ref).filter(Boolean)
-    : [];
+  const card = toCardCar(mapAdToUiCar(ad));
+  const images = Array.isArray(ad.images) ? ad.images.map((i) => i?.ref).filter(Boolean) : [];
 
-  // Build a long title, then shorten to 4 words
-  const rawTitle = `${ad.make || ""} ${
-    ad.modelDescription || ad.model || ""
-  }`.trim();
-  const title = firstWords(rawTitle, 4) || rawTitle || "Fahrzeug";
-
-  // Price
   const priceGross = ad?.price?.consumerPriceGross;
-  const priceText = priceGross ? `${formatPrice(priceGross)} €` : null;
-
-  // Core quick values
   const firstReg = formatYYYYMM(ad.firstRegistration);
   const hu = formatYYYYMM(ad.generalInspection);
-  const mileage = ad.mileage != null ? `${formatKm(ad.mileage)} km` : null;
+  const mileage = ad.mileage != null ? formatKm(ad.mileage) : null;
+  const ps = kwToPs(ad.power);
 
-  // Enum maps
-  const gearboxMap = {
-    MANUAL_GEAR: "Schaltung",
-    AUTOMATIC_GEAR: "Automatik",
-    SEMIAUTOMATIC_GEAR: "Halbautomatik",
-  };
-  const fuelMap = {
-    PETROL: "Benzin",
-    DIESEL: "Diesel",
-    ELECTRICITY: "Elektro",
-    HYBRID: "Hybrid",
-    HYBRID_DIESEL: "Hybrid (Diesel)",
-    LPG: "LPG",
-    CNG: "CNG",
-    ETHANOL: "Ethanol",
-    HYDROGENIUM: "Wasserstoff",
-  };
-  const doorsMap = {
-    TWO_OR_THREE: "2/3",
-    FOUR_OR_FIVE: "4/5",
-    SIX_OR_SEVEN: "6/7",
-  };
-  const driveMap = {
-    FRONT: "Frontantrieb",
-    REAR: "Heckantrieb",
-    ALL_WHEEL: "Allrad",
-  };
-
-  // Sections (NO IDs & Meta)
   const sectionVehicle = [
-    buildField("Fahrzeugklasse", ad.vehicleClass),
-    buildField("Kategorie", ad.category),
-    buildField("Marke", ad.make),
-    buildField("Modell", ad.model),
-    buildField("Erstzulassung", firstReg),
-    buildField("Kilometerstand", mileage),
-    buildField("Sitze", ad.seats),
-    buildField("Türen", enumLabel(ad.doors, doorsMap)),
-    buildField("Antrieb", enumLabel(ad.driveType, driveMap)),
+    field("Zustand", enumLabel(ad.condition, CONDITION)),
+    field("Kategorie", enumLabel(ad.category, CATEGORY)),
+    field("Marke", prettyBrand(ad.make)),
+    field("Modell", ad.model),
+    field("Erstzulassung", firstReg),
+    field("Kilometerstand", mileage),
+    field("Sitze", ad.seats),
+    field("Türen", enumLabel(ad.doors, DOORS)),
+    field("Antrieb", enumLabel(ad.driveType, DRIVE)),
   ];
 
-  const ps = kwToPs(ad.power);
   const sectionEngine = [
-    buildField(
-      "Leistung",
-      ad.power != null ? `${ad.power} kW${ps ? ` (${ps} PS)` : ""}` : null,
-    ),
-    buildField(
-      "Hubraum",
-      ad.cubicCapacity != null ? `${ad.cubicCapacity} cm³` : null,
-    ),
-    buildField("Zylinder", ad.cylinder),
-    buildField("Getriebe", enumLabel(ad.gearbox, gearboxMap)),
-    buildField("Kraftstoff", enumLabel(ad.fuel, fuelMap)),
-    buildField("E10 geeignet", labelYesNo(ad.e10Enabled)),
-    buildField(
-      "Tankvolumen",
-      ad.fuelTankVolume != null ? `${ad.fuelTankVolume} l` : null,
-    ),
+    field("Leistung", ad.power != null ? `${ad.power} kW${ps ? ` (${ps} PS)` : ""}` : null),
+    field("Hubraum", ad.cubicCapacity != null ? `${ad.cubicCapacity} cm³` : null),
+    field("Zylinder", ad.cylinder),
+    field("Getriebe", enumLabel(ad.gearbox, GEARBOX)),
+    field("Kraftstoff", enumLabel(ad.fuel, FUEL)),
+    field("E10 geeignet", labelYesNo(ad.e10Enabled)),
+    field("Tankvolumen", ad.fuelTankVolume != null ? `${ad.fuelTankVolume} l` : null),
   ];
 
   const sectionEnv = [
-    buildField("Schadstoffklasse", ad.emissionClass),
-    buildField("Umweltplakette", ad.emissionSticker),
-    buildField(
-      "CO₂ (komb.)",
-      ad?.emissions?.combined?.co2 != null
-        ? `${ad.emissions.combined.co2} g/km`
-        : null,
-    ),
-    buildField(
-      "Verbrauch (komb.)",
-      ad?.consumptions?.fuel?.combined != null
-        ? `${ad.consumptions.fuel.combined} l/100km`
-        : null,
-    ),
+    field("Schadstoffklasse", ad.emissionClass),
+    field("Umweltplakette", ad.emissionSticker),
+    field("CO₂-Emissionen (komb.)", ad?.emissions?.combined?.co2 != null ? `${ad.emissions.combined.co2} g/km` : null),
+    field("Verbrauch (komb.)", ad?.consumptions?.fuel?.combined != null ? `${ad.consumptions.fuel.combined} l/100 km` : null),
   ];
 
   const sectionColors = [
-    buildField("Außenfarbe", ad.exteriorColor),
-    buildField("Herstellerfarbe", ad.manufacturerColorName),
-    buildField("Metallic", labelYesNo(ad.metallic)),
-    buildField("Innenfarbe", ad.interiorColor),
-    buildField("Innenmaterial", ad.interiorType),
-    buildField("Ausstattungslinie", ad.trimLine),
-    buildField("Baureihe", ad.modelRange),
+    field("Außenfarbe", ad.exteriorColor),
+    field("Herstellerfarbe", ad.manufacturerColorName),
+    field("Metallic", labelYesNo(ad.metallic)),
+    field("Innenfarbe", ad.interiorColor),
+    field("Innenmaterial", ad.interiorType),
+    field("Ausstattungslinie", ad.trimLine),
+    field("Baureihe", ad.modelRange),
   ];
 
   const sectionService = [
-    buildField("HU (bis)", hu),
-    buildField("Scheckheft gepflegt", labelYesNo(ad.fullServiceHistory)),
-    buildField("Unfall/Schaden unrepariert", labelYesNo(ad.damageUnrepaired)),
-    buildField("Fahrbereit", labelYesNo(ad.roadworthy)),
-    buildField("Garantie", labelYesNo(ad.warranty)),
+    field("HU bis", hu),
+    field("Scheckheftgepflegt", labelYesNo(ad.fullServiceHistory)),
+    field("Unrepariertes Schadensfahrzeug", labelYesNo(ad.damageUnrepaired)),
+    field("Fahrtauglich", labelYesNo(ad.roadworthy)),
+    field("Garantie", labelYesNo(ad.warranty)),
   ];
 
-  // Features (compact)
-  const featureBooleans = [
+  const sectionWeight = [
+    field("Leergewicht", ad.weight != null ? `${ad.weight} kg` : null),
+    field("Anhängelast gebremst", ad.trailerLoadBraked != null ? `${ad.trailerLoadBraked} kg` : null),
+    field("Anhängelast ungebremst", ad.trailerLoadUnbraked != null ? `${ad.trailerLoadUnbraked} kg` : null),
+  ];
+
+  const features = [
     ["ABS", ad.abs],
     ["ESP", ad.esp],
     ["Bluetooth", ad.bluetooth],
@@ -300,314 +253,274 @@ export default async function CarDetailPage({ params }) {
     ["Multifunktionslenkrad", ad.multifunctionalWheel],
     ["Bordcomputer", ad.onBoardComputer],
     ["Sitzheizung", ad.electricHeatedSeats],
-    ["Beheizte Frontscheibe", ad.heatedWindshield],
+    ["Beheizbare Frontscheibe", ad.heatedWindshield],
     ["Lederlenkrad", ad.leatherSteeringWheel],
     ["Touchscreen", ad.touchscreen],
     ["USB", ad.usb],
     ["Apple CarPlay", ad.carplay],
     ["Ganzjahresreifen", ad.allSeasonTires],
-  ].filter(([, v]) => v === true);
+  ]
+    .filter(([, v]) => v === true)
+    .map(([n]) => n);
 
-  const featureArrays = [
-    buildField(
-      "Radio",
-      Array.isArray(ad.radio) && ad.radio.length ? ad.radio.join(", ") : null,
-    ),
-    buildField(
-      "Parkassistenten",
-      Array.isArray(ad.parkingAssistants) && ad.parkingAssistants.length
-        ? ad.parkingAssistants.join(", ")
-        : null,
-    ),
-    buildField(
-      "Heizung (Typen)",
-      Array.isArray(ad.heating) && ad.heating.length
-        ? ad.heating.join(", ")
-        : null,
-    ),
-    buildField("Airbags", ad.airbag),
-    buildField("Tagfahrlicht", ad.daytimeRunningLamps),
+  const featureDetails = [
+    field("Radio", Array.isArray(ad.radio) && ad.radio.length ? ad.radio.join(", ") : null),
+    field("Parkassistenten", Array.isArray(ad.parkingAssistants) && ad.parkingAssistants.length ? ad.parkingAssistants.join(", ") : null),
+    field("Heizung", Array.isArray(ad.heating) && ad.heating.length ? ad.heating.join(", ") : null),
+    field("Airbags", ad.airbag),
+    field("Tagfahrlicht", ad.daytimeRunningLamps),
   ];
 
-  const sectionFeatures = [
-    ...featureBooleans.map(([name]) => buildField(name, "Ja")),
-    ...featureArrays,
-  ];
-
-  const sectionTow = [
-    buildField("Leergewicht", ad.weight != null ? `${ad.weight} kg` : null),
-    buildField(
-      "Anhängelast gebremst",
-      ad.trailerLoadBraked != null ? `${ad.trailerLoadBraked} kg` : null,
-    ),
-    buildField(
-      "Anhängelast ungebremst",
-      ad.trailerLoadUnbraked != null ? `${ad.trailerLoadUnbraked} kg` : null,
-    ),
-  ];
-
-  // Description blocks
   const descBlocks = parseDescription(ad.description);
 
-  // Similar vehicles
-  let similar = [];
-  try {
-    const all = await fetchSellerAds();
-    similar = (Array.isArray(all) ? all : [])
-      .filter((x) => String(x?.mobileAdId) !== String(ad.mobileAdId))
-      .slice(0, 3)
-      .map((x) => {
-        const imgs = Array.isArray(x.images)
-          ? x.images.map((i) => i?.ref).filter(Boolean)
-          : [];
-        const longT = `${x.make || ""} ${
-          x.modelDescription || x.model || ""
-        }`.trim();
-        const shortT = firstWords(longT, 4) || longT || "Fahrzeug";
-        const p = x?.price?.consumerPriceGross || null;
-        return {
-          id: String(x.mobileAdId),
-          title: shortT,
-          image: imgs[0] || "/placeholder-car.jpg",
-          year: formatYYYYMM(x.firstRegistration),
-          km: x.mileage,
-          fuel: enumLabel(x.fuel, fuelMap),
-          price: p,
-        };
-      });
-  } catch {
-    similar = [];
-  }
+  const all = (await getCarsSafe()).map(toCardCar).filter((c) => c.id !== card.id && !c.reserved);
+  const similar = [
+    ...all.filter((c) => c.brand === card.brand),
+    ...all
+      .filter((c) => c.brand !== card.brand)
+      .sort((a, b) => Math.abs(a.price - card.price) - Math.abs(b.price - card.price)),
+  ].slice(0, 4);
+
+  const contactHref = (betreff) =>
+    `/kontakt?betreff=${encodeURIComponent(betreff)}&fahrzeug=${encodeURIComponent(card.title)}&fahrzeugId=${encodeURIComponent(card.id)}`;
 
   return (
-    <div className="ac-page">
-      <div className="px-4 sm:px-6 lg:px-12 py-6 sm:py-10 lg:py-14">
-        <div className="mx-auto w-full max-w-7xl">
-          {/* Breadcrumb */}
-          <div className="mb-5 sm:mb-8">
-            <Link
-              href="/fahrzeuge"
-              className="text-xs sm:text-sm text-[var(--ac-muted)] hover:text-[var(--ac-text)] transition flex items-center gap-2"
-            >
-              <span>←</span>
-              <span>Zurück zur Übersicht</span>
+    <div>
+      {/* Breadcrumb */}
+      <div className="border-b border-line bg-white">
+        <div className="container-ac flex items-center justify-between gap-4 py-2">
+          <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1 text-xs text-muted">
+            <Link href="/" className="shrink-0 hover:text-ink">
+              Startseite
             </Link>
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
-            {/* Images */}
-            <div className="space-y-4">
-              <ImageSlider images={images} alt={title || "Fahrzeug"} />
-            </div>
-
-            {/* Right Column */}
-            <div className="space-y-5 sm:space-y-6">
-              {/* Title + Price */}
-              <div>
-                <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-[var(--ac-text)] leading-tight">
-                  {title}
-                </h1>
-
-                <div className="mt-3 flex flex-wrap items-baseline gap-2 sm:gap-3">
-                  {priceText && (
-                    <span className="text-2xl sm:text-4xl font-light text-[var(--accent)]">
-                      {priceText}
-                    </span>
-                  )}
-
-                  {ad.condition && (
-                    <span className="text-[11px] sm:text-xs font-semibold text-white/80 bg-white/5 px-3 py-1 rounded-full border border-white/10">
-                      {ad.condition}
-                    </span>
-                  )}
-
-                  {ad.warranty === true && (
-                    <span className="text-[11px] sm:text-xs font-semibold text-emerald-300 bg-emerald-400/10 px-3 py-1 rounded-full border border-emerald-300/20">
-                      Garantie
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-2 text-[11px] sm:text-sm text-[var(--ac-muted-2)]">
-                  {firstReg ? <span>Erstzulassung: {firstReg}</span> : null}
-                  {mileage ? (
-                    <span className="ml-2 sm:ml-3">• Kilometer: {mileage}</span>
-                  ) : null}
-                </div>
-              </div>
-
-              {/* Quick Boxes (more compact on mobile) */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 pt-1">
-                {firstReg ? (
-                  <div className="bg-[rgba(10,20,45,0.35)] border border-white/10 rounded-xl p-3 text-center">
-                    <span className="block text-[10px] sm:text-xs text-[var(--ac-muted)]">
-                      Erstzulassung
-                    </span>
-                    <span className="text-sm sm:text-lg font-semibold text-[var(--ac-text)]">
-                      {firstReg}
-                    </span>
-                  </div>
-                ) : null}
-
-                {mileage ? (
-                  <div className="bg-[rgba(10,20,45,0.35)] border border-white/10 rounded-xl p-3 text-center">
-                    <span className="block text-[10px] sm:text-xs text-[var(--ac-muted)]">
-                      Kilometer
-                    </span>
-                    <span className="text-sm sm:text-lg font-semibold text-[var(--ac-text)]">
-                      {mileage}
-                    </span>
-                  </div>
-                ) : null}
-
-                {ad.power != null ? (
-                  <div className="bg-[rgba(10,20,45,0.35)] border border-white/10 rounded-xl p-3 text-center">
-                    <span className="block text-[10px] sm:text-xs text-[var(--ac-muted)]">
-                      Leistung
-                    </span>
-                    <span className="text-sm sm:text-lg font-semibold text-[var(--ac-text)]">
-                      {ps ? `${ps} PS` : `${ad.power} kW`}
-                    </span>
-                  </div>
-                ) : null}
-
-                {hu ? (
-                  <div className="bg-[rgba(10,20,45,0.35)] border border-white/10 rounded-xl p-3 text-center">
-                    <span className="block text-[10px] sm:text-xs text-[var(--ac-muted)]">
-                      HU
-                    </span>
-                    <span className="text-sm sm:text-lg font-semibold text-[var(--ac-text)]">
-                      {hu}
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-
-              {/* Actions */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <Link
-                  href="/kontakt"
-                  className="ac-btn-primary flex-1 py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base text-center"
-                >
-                  Finanzierung anfragen
-                </Link>
-
-                <Link
-                  href="/kontakt"
-                  className="flex-1 border border-white/10 bg-white/5 py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base text-[var(--ac-text)] hover:bg-white/10 transition text-center"
-                >
-                  Probefahrt vereinbaren
-                </Link>
-              </div>
-
-              {/* Contact Note */}
-              <p className="text-xs sm:text-sm text-[var(--ac-muted-2)] text-center sm:text-left leading-relaxed">
-                Haben Sie Fragen zu diesem Fahrzeug?
-                <br className="hidden sm:block" />
-                Kontaktieren Sie uns gerne unter{" "}
-                <a
-                  href="tel:+4924619163780"
-                  className="text-[var(--accent)] hover:underline"
-                >
-                  02461 9163780
-                </a>
-              </p>
-            </div>
-          </div>
-
-          {/* Specs (LESS SPACE + nicer layout) */}
-          <div className="mt-10 sm:mt-12 grid gap-4 sm:gap-6 lg:grid-cols-2">
-            <SpecSection title="Fahrzeug" items={sectionVehicle} />
-            <SpecSection title="Motor & Antrieb" items={sectionEngine} />
-            <SpecSection title="Verbrauch & Emissionen" items={sectionEnv} />
-            <SpecSection title="Farben & Innenraum" items={sectionColors} />
-            <SpecSection title="Zustand & Service" items={sectionService} />
-            <SpecSection title="Ausstattung" items={sectionFeatures} />
-            <SpecSection title="Gewicht & Anhängelast" items={sectionTow} />
-          </div>
-
-          {/* Description */}
-          {descBlocks.length > 0 && (
-            <div className="mt-10 sm:mt-12 border-t border-white/10 pt-7 sm:pt-8">
-              <h2 className="text-base sm:text-xl font-semibold text-[var(--ac-text)] mb-4">
-                Beschreibung
-              </h2>
-
-              <div className="space-y-4 sm:space-y-6">
-                {descBlocks.map((b, idx) => (
-                  <div
-                    key={idx}
-                    className="rounded-2xl border border-white/10 bg-[rgba(10,20,45,0.35)] p-4 sm:p-6"
-                  >
-                    {b.normalLines.length > 0 && (
-                      <div className="space-y-2 sm:space-y-3 text-[11px] sm:text-sm text-[var(--ac-muted-2)] leading-relaxed">
-                        {b.normalLines.map((line, i) => (
-                          <p key={i}>{renderInlineBold(line)}</p>
-                        ))}
-                      </div>
-                    )}
-
-                    {b.bullets.length > 0 && (
-                      <ul className="mt-3 sm:mt-4 space-y-2 text-[11px] sm:text-sm text-[var(--ac-muted-2)] list-disc pl-5">
-                        {b.bullets.map((li, i) => (
-                          <li key={i}>{renderInlineBold(li)}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Similar */}
-          {similar.length > 0 && (
-            <div className="mt-12 sm:mt-16">
-              <h2 className="text-base sm:text-xl font-semibold text-[var(--ac-text)] mb-4 sm:mb-6">
-                Ähnliche Fahrzeuge
-              </h2>
-
-              <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {similar.map((s) => (
-                  <Link
-                    key={s.id}
-                    href={`/fahrzeuge/${s.id}`}
-                    className="group rounded-2xl border border-white/10 overflow-hidden bg-[rgba(10,20,45,0.35)] hover:bg-[rgba(10,20,45,0.45)] transition"
-                  >
-                    <div className="relative aspect-[16/10]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={s.image}
-                        alt={s.title}
-                        className="h-full w-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                      {s.price != null && (
-                        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                          <span className="text-xs sm:text-sm font-bold text-white">
-                            {formatPrice(s.price)} €
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="p-4">
-                      <h3 className="text-xs sm:text-sm font-semibold text-[var(--ac-text)] line-clamp-1">
-                        {s.title}
-                      </h3>
-                      <p className="text-[11px] sm:text-xs text-[var(--ac-muted)] mt-1">
-                        {s.year || "-"} ·{" "}
-                        {s.km != null ? `${formatKm(s.km)} km` : "-"} ·{" "}
-                        {s.fuel || "-"}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
+            <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+            <Link href="/fahrzeuge" className="shrink-0 hover:text-ink">
+              Fahrzeuge
+            </Link>
+            <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate text-ink">{card.title}</span>
+          </nav>
+          <Link href="/fahrzeuge" className="link hidden shrink-0 items-center gap-1 text-xs sm:inline-flex">
+            <ArrowLeft className="h-3.5 w-3.5" /> Zur Übersicht
+          </Link>
         </div>
       </div>
+
+      <div className="container-ac mt-4 grid gap-4 lg:grid-cols-12 lg:gap-5">
+        {/* Left column */}
+        <div className="min-w-0 space-y-4 lg:col-span-8">
+          <ImageSlider images={images} alt={card.title} />
+
+          {/* Title (mobile) */}
+          <div className="card p-4 lg:hidden">
+            <TitleBlock card={card} ad={ad} priceGross={priceGross} />
+          </div>
+
+          <div className="card p-4">
+            <h2 className="text-[15px] font-semibold">Technische Daten</h2>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <KeyFact icon={Calendar} label="Erstzulassung" value={firstReg} />
+              <KeyFact icon={Gauge} label="Kilometerstand" value={mileage} />
+              <KeyFact icon={Zap} label="Leistung" value={ad.power != null ? `${ps} PS (${ad.power} kW)` : null} />
+              <KeyFact icon={Fuel} label="Kraftstoff" value={enumLabel(ad.fuel, FUEL)} />
+              <KeyFact icon={Cog} label="Getriebe" value={enumLabel(ad.gearbox, GEARBOX)} />
+              <KeyFact icon={Wrench} label="HU bis" value={hu} />
+            </div>
+          </div>
+
+          {features.length ? (
+            <section className="card p-4">
+              <h2 className="text-[15px] font-semibold">Ausstattung</h2>
+              <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
+                {features.map((f) => (
+                  <li key={f} className="flex items-center gap-1.5 text-[13px] text-body">
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center text-emerald-600">
+                      <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+                    </span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {descBlocks.length ? (
+            <section className="card p-4">
+              <h2 className="text-[15px] font-semibold">Fahrzeugbeschreibung</h2>
+              <div className="mt-2 space-y-3 text-[13px] leading-6 text-body">
+                {descBlocks.map((b, idx) => (
+                  <div key={idx} className={idx ? "border-t border-line pt-3" : ""}>
+                    {b.normalLines.map((line, i) => (
+                      <p key={i}>{renderInlineBold(line)}</p>
+                    ))}
+                    {b.bullets.length ? (
+                      <ul className="mt-2 grid gap-x-4 gap-y-0.5 sm:grid-cols-2">
+                        {b.bullets.map((li, i) => (
+                          <li key={i} className="flex gap-2.5">
+                            <span className="mt-2.5 h-1 w-1 shrink-0 rounded-full bg-brand-500" />
+                            <span>{renderInlineBold(li)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <section className="card p-4">
+            <h2 className="text-[15px] font-semibold">Technische Details</h2>
+            <div className="mt-3 gap-8 md:columns-2">
+              <SpecGroup title="Fahrzeug" items={sectionVehicle} />
+              <SpecGroup title="Motor & Antrieb" items={sectionEngine} />
+              <SpecGroup title="Zustand & Service" items={sectionService} />
+              <SpecGroup title="Farbe & Innenraum" items={sectionColors} />
+              <SpecGroup title="Verbrauch & Umwelt" items={sectionEnv} />
+              <SpecGroup title="Weitere Ausstattung" items={featureDetails} />
+              <SpecGroup title="Gewicht & Anhängelast" items={sectionWeight} />
+            </div>
+          </section>
+        </div>
+
+        {/* Right column – sticky contact card */}
+        <aside className="lg:col-span-4">
+          <div className="space-y-3 lg:sticky lg:top-[88px]">
+            <div className="card p-4">
+              <div className="hidden lg:block">
+                <TitleBlock card={card} ad={ad} priceGross={priceGross} />
+              </div>
+
+              <div className="grid gap-2 lg:mt-4">
+                <a href={SITE.phoneHref} className="btn btn-primary btn-lg w-full">
+                  <Phone className="h-4 w-4" />
+                  {SITE.phoneDisplay}
+                </a>
+                <Link href={contactHref("Probefahrt vereinbaren")} className="btn btn-secondary w-full">
+                  <Calendar className="h-4 w-4" />
+                  Probefahrt vereinbaren
+                </Link>
+                <Link href={contactHref("Allgemeine Anfrage")} className="btn btn-secondary w-full">
+                  <Mail className="h-4 w-4" />
+                  Nachricht senden
+                </Link>
+              </div>
+            </div>
+
+            <Link
+              href={contactHref("Finanzierung anfragen")}
+              className="group card flex items-center gap-3 p-3 transition hover:border-brand-200"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-600">
+                <Wallet className="h-4 w-4" />
+              </span>
+              <span className="flex-1">
+                <span className="block text-[13px] font-semibold text-ink">Finanzierung anfragen</span>
+                <span className="block text-xs text-muted">12–84 Monate, mit oder ohne Anzahlung</span>
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted" />
+            </Link>
+
+            <Link
+              href="/garantie"
+              className="group card flex items-center gap-3 p-3 transition hover:border-brand-200"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-600">
+                <ShieldCheck className="h-4 w-4" />
+              </span>
+              <span className="flex-1">
+                <span className="block text-[13px] font-semibold text-ink">CarGarantie® möglich</span>
+                <span className="block text-xs text-muted">12, 24 oder 36 Monate Schutz</span>
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted" />
+            </Link>
+
+            <div className="card overflow-hidden">
+              <div className="flex items-center gap-2.5 bg-navy-900 px-3 py-2.5 text-white">
+                <MapPin className="h-4 w-4 text-accent-400" />
+                <div>
+                  <p className="text-[13px] font-semibold">{SITE.name}</p>
+                  <p className="text-xs text-white/70">
+                    {SITE.street}, {SITE.zip} {SITE.city}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-xs">
+                <span className="inline-flex items-center gap-1.5 text-body">
+                  <Star className="h-3.5 w-3.5 fill-star text-star" />
+                  <span className="font-semibold text-ink">
+                    {SITE.googleRatingFallback.rating.toFixed(1).replace(".", ",")}
+                  </span>{" "}
+                  bei Google
+                </span>
+                <a href={SITE.mapsLink} target="_blank" rel="noopener noreferrer" className="link">
+                  Route planen
+                </a>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      {similar.length ? (
+        <section className="container-ac mt-8">
+          <div className="flex items-end justify-between gap-4">
+            <h2 className="section-title">Ähnliche Fahrzeuge</h2>
+            <Link href="/fahrzeuge" className="link text-sm">
+              Alle Fahrzeuge
+            </Link>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+            {similar.map((c) => (
+              <CarCard key={c.id} car={c} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* Mobile sticky action bar */}
+      <style>{"@media (max-width: 1023px) { body { padding-bottom: 56px; } }"}</style>
+      <div className="fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t border-line bg-white p-2 lg:hidden">
+        <a href={SITE.phoneHref} className="btn btn-secondary flex-1">
+          <Phone className="h-4 w-4" />
+          Anrufen
+        </a>
+        <Link href={contactHref("Allgemeine Anfrage")} className="btn btn-primary flex-1">
+          <Mail className="h-4 w-4" />
+          Anfragen
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function TitleBlock({ card, ad, priceGross }) {
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1.5">
+        {card.reserved ? <span className="chip bg-amber-100 text-amber-800">Reserviert</span> : null}
+        {ad.warranty === true ? (
+          <span className="chip bg-emerald-50 text-emerald-700">
+            <ShieldCheck className="h-3.5 w-3.5" /> Garantie
+          </span>
+        ) : null}
+        {ad.fullServiceHistory === true ? (
+          <span className="chip bg-brand-50 text-brand-700">
+            <BadgeCheck className="h-3.5 w-3.5" /> Scheckheftgepflegt
+          </span>
+        ) : null}
+      </div>
+      <h1 className="mt-2 text-lg font-bold leading-snug">{card.title}</h1>
+      {priceGross ? (
+        <p className="mt-2 text-2xl font-bold text-ink">{formatPrice(priceGross)}</p>
+      ) : (
+        <p className="mt-2 text-lg font-semibold text-ink">Preis auf Anfrage</p>
+      )}
+      <p className="mt-0.5 text-xs text-muted">
+        {[card.firstRegistration && `EZ ${card.firstRegistration}`, card.km != null && formatKm(card.km), card.power && `${card.power} PS`]
+          .filter(Boolean)
+          .join(" · ")}
+      </p>
     </div>
   );
 }

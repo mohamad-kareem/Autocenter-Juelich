@@ -1,143 +1,182 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react";
 
-const FALLBACK_IMAGE = "/placeholder-car.jpg";
+const FALLBACK_IMAGE = "/placeholder-car.svg";
+const cx = (...c) => c.filter(Boolean).join(" ");
 
 function isRemoteImage(src) {
   return typeof src === "string" && /^https?:\/\//i.test(src);
 }
 
-function cleanImages(images) {
-  if (!Array.isArray(images)) return [];
-
-  const cleaned = images
-    .map((img) => (typeof img === "string" ? img.trim() : ""))
-    .filter(Boolean);
-
-  return Array.from(new Set(cleaned));
-}
-
-export default function ImageSlider({
-  images = [],
-  alt = "Fahrzeug",
-  thumbsCount = 6,
-  className = "",
-}) {
-  const list = useMemo(() => cleanImages(images), [images]);
-
-  const [index, setIndex] = useState(0);
-
+export default function ImageSlider({ images = [], alt = "Fahrzeug", className = "" }) {
+  const list = useMemo(
+    () => [...new Set((Array.isArray(images) ? images : []).map((s) => (typeof s === "string" ? s.trim() : "")).filter(Boolean))],
+    [images],
+  );
   const total = list.length;
-  const canSlide = total > 1;
+  const [index, setIndex] = useState(0);
+  const [lightbox, setLightbox] = useState(false);
+  const thumbsRef = useRef(null);
+  const touch = useRef(null);
 
-  const maxThumbs = Math.max(1, Number(thumbsCount) || 6);
-  const visibleThumbs = list.slice(0, maxThumbs);
-  const remainingThumbs = Math.max(total - maxThumbs, 0);
+  const current = total ? list[Math.min(index, total - 1)] : FALLBACK_IMAGE;
 
-  const safeIndex = total > 0 ? Math.min(Math.max(index, 0), total - 1) : 0;
+  const go = useCallback(
+    (dir) => {
+      if (total < 2) return;
+      setIndex((i) => (i + dir + total) % total);
+    },
+    [total],
+  );
 
-  const currentImage = total > 0 ? list[safeIndex] : FALLBACK_IMAGE;
+  useEffect(() => {
+    const box = thumbsRef.current;
+    const el = box?.querySelector(`[data-thumb="${index}"]`);
+    if (box && el) {
+      box.scrollTo({ left: el.offsetLeft - box.clientWidth / 2 + el.clientWidth / 2, behavior: "smooth" });
+    }
+  }, [index]);
 
-  const goPrev = useCallback(() => {
-    if (!canSlide) return;
+  useEffect(() => {
+    const onKey = (e) => {
+      const tag = e.target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target?.isContentEditable) return;
+      if (e.key === "ArrowLeft") go(-1);
+      if (e.key === "ArrowRight") go(1);
+      if (e.key === "Escape") setLightbox(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.documentElement.style.overflow = lightbox ? "hidden" : "";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.documentElement.style.overflow = "";
+    };
+  }, [go, lightbox]);
 
-    setIndex((current) => {
-      const normalized = Math.min(Math.max(current, 0), total - 1);
-      return normalized === 0 ? total - 1 : normalized - 1;
-    });
-  }, [canSlide, total]);
+  const swipe = {
+    onTouchStart: (e) => (touch.current = e.touches[0].clientX),
+    onTouchEnd: (e) => {
+      if (touch.current == null) return;
+      const dx = e.changedTouches[0].clientX - touch.current;
+      if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+      touch.current = null;
+    },
+  };
 
-  const goNext = useCallback(() => {
-    if (!canSlide) return;
-
-    setIndex((current) => {
-      const normalized = Math.min(Math.max(current, 0), total - 1);
-      return normalized === total - 1 ? 0 : normalized + 1;
-    });
-  }, [canSlide, total]);
+  const renderNav = (dark = false) =>
+    total > 1 ? (
+      <>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            go(-1);
+          }}
+          aria-label="Vorheriges Bild"
+          className={cx(
+            "absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full shadow-md transition",
+            dark ? "bg-white/10 text-white hover:bg-white/20" : "bg-white/90 text-ink hover:bg-white",
+          )}
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            go(1);
+          }}
+          aria-label="Nächstes Bild"
+          className={cx(
+            "absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full shadow-md transition",
+            dark ? "bg-white/10 text-white hover:bg-white/20" : "bg-white/90 text-ink hover:bg-white",
+          )}
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </>
+    ) : null;
 
   return (
-    <div className={["space-y-4", className].filter(Boolean).join(" ")}>
-      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-[rgba(10,20,45,0.35)]">
+    <div className={cx("space-y-2", className)}>
+      <div
+        className="group relative aspect-[3/2] cursor-zoom-in overflow-hidden rounded-lg bg-navy-950"
+        onClick={() => total && setLightbox(true)}
+        {...swipe}
+      >
         <Image
-          src={currentImage}
-          alt={alt}
+          src={current}
+          alt={`${alt} – Bild ${index + 1}`}
           fill
-          unoptimized={isRemoteImage(currentImage)}
-          className="object-cover"
-          sizes="(max-width: 1024px) 100vw, 50vw"
+          priority
+          unoptimized={isRemoteImage(current)}
+          className="object-contain"
+          sizes="(max-width: 1024px) 100vw, 60vw"
         />
-
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
-
-        {canSlide && (
-          <>
-            <button
-              type="button"
-              onClick={goPrev}
-              aria-label="Vorheriges Bild"
-              className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/55"
-            >
-              ←
-            </button>
-
-            <button
-              type="button"
-              onClick={goNext}
-              aria-label="Nächstes Bild"
-              className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/55"
-            >
-              →
-            </button>
-
-            <div className="absolute bottom-3 right-3 rounded-full border border-white/15 bg-black/45 px-3 py-1 text-xs text-white/90 backdrop-blur-sm">
-              {safeIndex + 1} / {total}
-            </div>
-          </>
-        )}
+        {renderNav()}
+        {total ? (
+          <div className="absolute bottom-3 right-3 flex items-center gap-2">
+            <span className="chip bg-black/60 font-medium text-white">
+              {index + 1} / {total}
+            </span>
+            <span className="chip bg-black/60 font-medium text-white">
+              <Expand className="h-3 w-3" /> Vollbild
+            </span>
+          </div>
+        ) : null}
       </div>
 
-      {canSlide && (
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-          {visibleThumbs.map((src, thumbIndex) => {
-            const isActive = thumbIndex === safeIndex;
-            const isLastVisibleThumb = thumbIndex === visibleThumbs.length - 1;
-            const showMoreOverlay = isLastVisibleThumb && remainingThumbs > 0;
-
-            return (
-              <button
-                key={`${src}-${thumbIndex}`}
-                type="button"
-                onClick={() => setIndex(thumbIndex)}
-                aria-label={`Bild ${thumbIndex + 1}`}
-                className={[
-                  "relative aspect-[4/3] overflow-hidden rounded-xl border bg-[rgba(10,20,45,0.35)] transition",
-                  isActive
-                    ? "border-[var(--accent)]"
-                    : "border-white/10 hover:border-white/25",
-                ].join(" ")}
-              >
-                <Image
-                  src={src}
-                  alt={`${alt} - Bild ${thumbIndex + 1}`}
-                  fill
-                  unoptimized={isRemoteImage(src)}
-                  className="object-cover"
-                  sizes="(max-width: 640px) 33vw, (max-width: 1024px) 16vw, 10vw"
-                />
-
-                {showMoreOverlay && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/55 text-sm font-semibold text-white">
-                    +{remainingThumbs}
-                  </div>
-                )}
-              </button>
-            );
-          })}
+      {total > 1 ? (
+        <div ref={thumbsRef} className="no-scrollbar relative flex gap-2 overflow-x-auto pb-1">
+          {list.map((src, i) => (
+            <button
+              key={`${src}-${i}`}
+              type="button"
+              data-thumb={i}
+              onClick={() => setIndex(i)}
+              aria-label={`Bild ${i + 1}`}
+              className={cx(
+                "relative aspect-[4/3] w-20 shrink-0 overflow-hidden rounded ring-2 transition",
+                i === index ? "ring-brand-600" : "opacity-70 ring-transparent hover:opacity-100",
+              )}
+            >
+              <Image src={src} alt="" fill unoptimized={isRemoteImage(src)} className="object-cover" sizes="112px" />
+            </button>
+          ))}
         </div>
-      )}
+      ) : null}
+
+      {lightbox ? (
+        <div className="fixed inset-0 z-[100] flex flex-col bg-navy-950/95" role="dialog" aria-label="Bildergalerie">
+          <div className="flex items-center justify-between px-4 py-3 text-white">
+            <span className="text-sm text-white/70">
+              {index + 1} / {total}
+            </span>
+            <button
+              type="button"
+              onClick={() => setLightbox(false)}
+              aria-label="Schließen"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="relative flex-1" {...swipe}>
+            <Image
+              src={current}
+              alt={`${alt} – Bild ${index + 1}`}
+              fill
+              unoptimized={isRemoteImage(current)}
+              className="object-contain"
+              sizes="100vw"
+            />
+            {renderNav(true)}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

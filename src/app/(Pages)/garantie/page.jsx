@@ -1,192 +1,97 @@
+import Link from "next/link";
+import { Check, Clock3, Globe2, Info, Minus, Plus, Receipt, Wrench } from "lucide-react";
+import PageHeader from "@/app/(components)/PageHeader";
+
+export const metadata = {
+  title: "CarGarantie®",
+  description:
+    "Mehr Schutz für Ihren Gebrauchtwagen: CarGarantie® bei Autocenter Jülich mit 12, 24 oder 36 Monaten Laufzeit und 24/7 Notfallservice im EU-Raum.",
+};
+
+const HIGHLIGHTS = [
+  { icon: Clock3, title: "12, 24 oder 36 Monate", text: "Schutz passend zu Fahrzeug und Nutzung." },
+  { icon: Wrench, title: "Hilfe mit der Werkstatt", text: "Wir unterstützen bei der Abwicklung." },
+  { icon: Receipt, title: "Klare Konditionen", text: "Keine versteckten Kosten." },
+  { icon: Globe2, title: "24/7 im EU-Raum", text: "Notfallservice europaweit." },
+];
+
+const COVERAGE = [
+  { kind: "included", title: "Enthalten", items: ["Motor & Getriebe", "Antriebsstrang", "Hauptelektronik"] },
+  {
+    kind: "optional",
+    title: "Erweiterbar",
+    items: ["Klimaanlage", "Fahrerassistenzsysteme", "Komfortelektronik (je nach Ausstattung)"],
+  },
+  { kind: "excluded", title: "Nicht enthalten", items: ["Verschleißteile", "Karosserieschäden", "Unfallfolgen"] },
+];
+
+const STYLE = {
+  included: { icon: Check, cls: "text-emerald-600" },
+  optional: { icon: Plus, cls: "text-brand-600" },
+  excluded: { icon: Minus, cls: "text-slate-400" },
+};
+
 export default function GarantiePage() {
   return (
-    <div className="ac-page">
-      <div className="px-4 sm:px-6 lg:px-12 py-10 sm:py-12 lg:py-16">
-        <div className="mx-auto w-full max-w-6xl">
-          {/* HERO (left only) */}
-          <section className="relative">
-            <div className="h-px w-full bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+    <div>
+      <PageHeader
+        crumbs={[{ label: "Garantie" }]}
+        title="CarGarantie® – mehr Schutz, ganz einfach"
+        subtitle="Flexible Laufzeiten, klare Konditionen und Hilfe rund um die Uhr."
+      >
+        <Link href="/kontakt?betreff=Allgemeine%20Anfrage" className="btn btn-primary shrink-0">
+          Beratung anfragen
+        </Link>
+      </PageHeader>
 
-            <div className="py-10 sm:py-12 lg:py-2">
-              <div className="max-w-3xl">
-                <p className="text-xs font-semibold tracking-wide text-[var(--ac-muted)]">
-                  CAR GARANTIE®
-                </p>
-
-                {/* ✅ same line */}
-                <h1 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight text-[var(--ac-text)]">
-                  Mehr Schutz –{" "}
-                  <span className="ac-text-gradient">ganz einfach.</span>
-                </h1>
-
-                <p className="mt-3 max-w-2xl text-sm sm:text-base text-[var(--ac-muted-2)] leading-relaxed">
-                  Flexible Laufzeiten. Klare Konditionen.
-                </p>
+      <div className="container-ac mt-4 space-y-4">
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line lg:grid-cols-4">
+          {HIGHLIGHTS.map(({ icon: Icon, ...h }) => (
+            <div key={h.title} className="flex gap-2.5 bg-white p-4">
+              <Icon className="h-5 w-5 shrink-0 text-brand-600" />
+              <div>
+                <h2 className="text-sm font-semibold">{h.title}</h2>
+                <p className="mt-0.5 text-xs text-muted">{h.text}</p>
               </div>
             </div>
+          ))}
+        </div>
 
-            <div className="h-px w-full bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-          </section>
-
-          {/* FEATURES */}
-          <section className="mt-10 sm:mt-12">
-            <div className="rounded-2xl border border-white/10 overflow-hidden">
-              <div className="grid grid-cols-1 md:grid-cols-2">
-                <div className="p-5 sm:p-6 bg-[rgba(10,20,45,0.35)] border-b md:border-b-0 md:border-r border-white/10">
-                  <p className="text-xs text-[var(--ac-muted)]">Laufzeiten</p>
-                  <p className="mt-1 text-base sm:text-lg font-semibold text-[var(--ac-text)]">
-                    12, 24 oder 36 Monate
-                  </p>
-                  <p className="mt-2 text-sm text-[var(--ac-muted-2)]">
-                    Schutz passend zu Fahrzeug und Nutzung.
-                  </p>
-                </div>
-
-                <div className="p-5 sm:p-6 bg-[rgba(10,20,45,0.45)] border-b border-white/10 md:border-b-0">
-                  <p className="text-xs text-[var(--ac-muted)]">Abwicklung</p>
-                  <p className="mt-1 text-base sm:text-lg font-semibold text-[var(--ac-text)]">
-                    Unterstützung mit der Werkstatt
-                  </p>
-                  <p className="mt-2 text-sm text-[var(--ac-muted-2)]">
-                    Wir helfen bei der Organisation und Abwicklung.
-                  </p>
-                </div>
-
-                <div className="p-5 sm:p-6 bg-[rgba(10,20,45,0.45)] md:border-r border-white/10">
-                  <p className="text-xs text-[var(--ac-muted)]">Konditionen</p>
-                  <p className="mt-1 text-base sm:text-lg font-semibold text-[var(--ac-text)]">
-                    Klar & nachvollziehbar
-                  </p>
-                  <p className="mt-2 text-sm text-[var(--ac-muted-2)]">
-                    Keine unnötigen Überraschungen durch versteckte Kosten.
-                  </p>
-                </div>
-
-                <div className="p-5 sm:p-6 bg-[rgba(10,20,45,0.35)]">
-                  <p className="text-xs text-[var(--ac-muted)]">
-                    Notfallservice
-                  </p>
-                  <p className="mt-1 text-base sm:text-lg font-semibold text-[var(--ac-text)]">
-                    24/7 im EU-Raum
-                  </p>
-                  <p className="mt-2 text-sm text-[var(--ac-muted-2)]">
-                    Schnelle Hilfe im Fall der Fälle – europaweit.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* COVERAGE */}
-          <section className="mt-12 sm:mt-14">
-            <div className="flex items-end justify-between gap-4 flex-wrap">
-              <h2 className="text-xl sm:text-2xl font-bold text-[var(--ac-text)]">
-                Schutzumfang
-              </h2>
-              <p className="text-xs text-[var(--ac-muted)]">
-                * Details laut Garantievertrag
-              </p>
-            </div>
-
-            <div className="mt-6 overflow-hidden rounded-2xl border border-white/10">
-              <div className="grid grid-cols-1 lg:grid-cols-3">
-                <div className="p-5 sm:p-6 bg-[rgba(10,20,45,0.35)] border-b lg:border-b-0 lg:border-r border-white/10">
-                  <p className="text-xs text-[var(--ac-muted)]">Enthalten</p>
-                  <h3 className="mt-1 text-base sm:text-lg font-bold text-[var(--ac-text)]">
-                    Wichtige Baugruppen
-                  </h3>
-
-                  <ul className="mt-4 space-y-3 text-sm text-[var(--ac-muted-2)]">
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[var(--ac-blue-light)]" />
-                      Motor & Getriebe
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[var(--ac-blue-light)]" />
-                      Antriebsstrang
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[var(--ac-blue-light)]" />
-                      Hauptelektronik
-                    </li>
+        <section className="card p-4 sm:p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-base font-semibold">Leistungsumfang</h2>
+            <p className="text-xs text-muted">Details laut individuellem Garantievertrag</p>
+          </div>
+          <div className="mt-3 grid gap-4 sm:grid-cols-3">
+            {COVERAGE.map((c) => {
+              const { icon: Icon, cls } = STYLE[c.kind];
+              return (
+                <div key={c.title}>
+                  <h3 className="text-[13px] font-semibold">{c.title}</h3>
+                  <ul className="mt-1.5 space-y-1">
+                    {c.items.map((it) => (
+                      <li key={it} className="flex items-center gap-1.5 text-[13px] text-body">
+                        <Icon className={`h-3.5 w-3.5 shrink-0 ${cls}`} strokeWidth={2.5} />
+                        {it}
+                      </li>
+                    ))}
                   </ul>
                 </div>
+              );
+            })}
+          </div>
+          <p className="mt-4 border-t border-line pt-3 text-xs text-muted">
+            Alle Garantien werden von <span className="font-semibold text-ink">CarGarantie®</span> bereitgestellt.
+          </p>
+        </section>
 
-                <div className="p-5 sm:p-6 bg-[rgba(10,20,45,0.45)] border-b lg:border-b-0 lg:border-r border-white/10">
-                  <p className="text-xs text-[var(--ac-muted)]">Erweiterbar</p>
-                  <h3 className="mt-1 text-base sm:text-lg font-bold text-[var(--ac-text)]">
-                    Komfort & Assistenz
-                  </h3>
-
-                  <ul className="mt-4 space-y-3 text-sm text-[var(--ac-muted-2)]">
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[var(--ac-cyan-light)]" />
-                      Klimaanlage
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[var(--ac-cyan-light)]" />
-                      Fahrerassistenzsysteme
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[var(--ac-cyan-light)]" />
-                      Komfortelektronik (je nach Ausstattung)
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="p-5 sm:p-6 bg-[rgba(10,20,45,0.35)]">
-                  <p className="text-xs text-[var(--ac-muted)]">
-                    Nicht enthalten
-                  </p>
-                  <h3 className="mt-1 text-base sm:text-lg font-bold text-[var(--ac-text)]">
-                    Ausnahmen
-                  </h3>
-
-                  <ul className="mt-4 space-y-3 text-sm text-[var(--ac-muted-2)]">
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-white/20" />
-                      Verschleißteile
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-white/20" />
-                      Karosserieschäden
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-white/20" />
-                      Unfallfolgen
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <p className="text-sm text-[var(--ac-muted-2)]">
-                Alle Garantien werden{" "}
-                <span className="text-[var(--ac-text)] font-semibold">
-                  CarGarantie®
-                </span>{" "}
-                bereitgestellt.
-              </p>
-            </div>
-          </section>
-
-          {/* LEGAL */}
-          <section className="mt-12">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 sm:p-8">
-              <h3 className="text-base sm:text-lg font-bold text-[var(--ac-text)]">
-                Rechtliche Hinweise
-              </h3>
-              <p className="mt-3 text-sm text-[var(--ac-muted-2)] leading-relaxed">
-                Die CarGarantie® ist eine freiwillige Leistung des AutoCenter
-                Jülich in Kooperation mit CarGarantie® und keine gesetzliche
-                Gewährleistung. Umfang und Bedingungen ergeben sich aus dem
-                individuellen Garantievertrag. Voraussetzung ist ein technisch
-                einwandfreies Fahrzeug bei Vertragsabschluss. Stand: Februar
-                2026.
-              </p>
-            </div>
-          </section>
+        <div className="flex gap-2.5 rounded-lg border border-line bg-white p-4 text-xs text-muted">
+          <Info className="h-4 w-4 shrink-0" />
+          <p>
+            Die CarGarantie® ist eine freiwillige Leistung des Autocenter Jülich in Kooperation mit CarGarantie® und
+            keine gesetzliche Gewährleistung. Umfang und Bedingungen ergeben sich aus dem individuellen Garantievertrag.
+            Voraussetzung ist ein technisch einwandfreies Fahrzeug bei Vertragsabschluss. Stand: Februar 2026.
+          </p>
         </div>
       </div>
     </div>
