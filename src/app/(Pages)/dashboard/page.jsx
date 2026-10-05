@@ -16,6 +16,13 @@ const STATUS_STYLE = {
   archived: "bg-slate-100 text-slate-600",
 };
 
+const TONES = {
+  blue: { bar: "bg-blue-500", icon: "bg-blue-50 text-blue-600", pill: "bg-blue-50 text-blue-700" },
+  violet: { bar: "bg-violet-500", icon: "bg-violet-50 text-violet-600", pill: "bg-violet-50 text-violet-700" },
+  emerald: { bar: "bg-emerald-500", icon: "bg-emerald-50 text-emerald-600", pill: "bg-emerald-50 text-emerald-700" },
+  amber: { bar: "bg-amber-500", icon: "bg-amber-50 text-amber-600", pill: "bg-emerald-50 text-emerald-700" },
+};
+
 const timeFmt = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit" });
 const dateFmt = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", day: "2-digit", month: "2-digit" });
 
@@ -34,12 +41,16 @@ export default async function DashboardPage() {
   const greeting = hour < 11 ? "Guten Morgen" : hour < 18 ? "Guten Tag" : "Guten Abend";
   const today = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", dateStyle: "full" }).format(new Date());
 
+  const onDutyNames = week.onDuty.map((d) => String(d.name || "").split(" ")[0]).filter(Boolean);
+
   const tasksTile = {
     label: "Aufgaben heute",
     value: tasks.today,
-    hint: `${tasks.week} offen diese Woche`,
+    hint: `${tasks.week} diese Woche`,
+    alert: tasks.today > 0,
     href: "/dashboard/wochenplan",
     icon: CalendarCheck,
+    tone: "violet",
   };
 
   const stats = isAdmin
@@ -48,22 +59,49 @@ export default async function DashboardPage() {
           label: "Neue Anfragen",
           value: messages?.unread ?? 0,
           hint: `${messages?.open ?? 0} offen`,
+          alert: (messages?.unread ?? 0) > 0,
           href: "/dashboard/anfragen",
           icon: Mail,
+          tone: "blue",
         },
         tasksTile,
-        { label: "Fahrzeuge online", value: cars ?? "–", hint: "auf mobile.de", href: "/fahrzeuge", icon: Car },
-        { label: "Im Dienst", value: week.onDuty.length, hint: "eingestempelt", href: "/dashboard/zeiterfassung", icon: CircleDot },
+        {
+          label: "Fahrzeuge online",
+          value: cars ?? "–",
+          hint: "mobile.de",
+          href: "/fahrzeuge",
+          icon: Car,
+          tone: "emerald",
+        },
+        {
+          label: "Im Dienst",
+          value: week.onDuty.length,
+          hint: onDutyNames.length ? onDutyNames.join(", ") : "niemand",
+          title: week.onDuty.map((d) => `${d.name} seit ${timeFmt.format(new Date(d.since))}`).join("\n"),
+          live: week.onDuty.length > 0,
+          href: "/dashboard/zeiterfassung",
+          icon: CircleDot,
+          tone: "amber",
+        },
       ]
     : [
         tasksTile,
-        { label: "Diese Woche", value: formatHours(week.totalMinutes), hint: "Arbeitszeit", href: "/dashboard/stempeluhr", icon: Clock },
+        {
+          label: "Diese Woche",
+          value: formatHours(week.totalMinutes),
+          hint: "Arbeitszeit",
+          href: "/dashboard/stempeluhr",
+          icon: Clock,
+          tone: "blue",
+        },
         {
           label: "Status",
-          value: week.onDuty.length ? "Eingestempelt" : "Ausgestempelt",
+          value: week.onDuty.length ? "Im Dienst" : "Frei",
           hint: "Stempeluhr",
+          live: week.onDuty.length > 0,
           href: "/dashboard/stempeluhr",
           icon: CircleDot,
+          tone: "amber",
         },
       ];
 
@@ -78,36 +116,60 @@ export default async function DashboardPage() {
       </div>
 
       <div className={cx("card grid divide-line overflow-hidden", isAdmin ? "grid-cols-2 lg:grid-cols-4 lg:divide-x" : "grid-cols-1 divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0")}>
-        {stats.map(({ icon: Icon, ...s }, i) => (
-          <Link
-            key={s.label}
-            href={s.href}
-            className={cx(
-              "group flex items-center gap-3 px-4 py-3 transition hover:bg-canvas/60",
-              isAdmin && i % 2 === 1 && "border-l border-line lg:border-l-0",
-              isAdmin && i > 1 && "border-t border-line lg:border-t-0",
-            )}
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 transition group-hover:bg-brand-100">
-              <Icon className="h-4 w-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-lg font-bold leading-tight text-ink">{s.value}</span>
-              <span className="block truncate text-[11px] text-muted">
-                {s.label}
-                {s.hint ? <span className="text-muted/70"> · {s.hint}</span> : null}
+        {stats.map(({ icon: Icon, ...s }, i) => {
+          const tone = TONES[s.tone] || TONES.blue;
+          const isZero = s.value === 0;
+          return (
+            <Link
+              key={s.label}
+              href={s.href}
+              title={s.title || undefined}
+              className={cx(
+                "group relative flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-canvas/60",
+                isAdmin && i % 2 === 1 && "border-l border-line lg:border-l-0",
+                isAdmin && i > 1 && "border-t border-line lg:border-t-0",
+              )}
+            >
+              <span className={cx("absolute inset-y-3 left-0 w-[3px] rounded-r-full", tone.bar)} aria-hidden />
+              <span className="min-w-0">
+                <span className="block text-[10.5px] font-semibold uppercase tracking-wider text-muted">
+                  {s.label}
+                </span>
+                <span className="mt-1 flex min-w-0 items-center gap-2">
+                  <span
+                    className={cx(
+                      "text-[22px] font-bold leading-none tabular-nums",
+                      isZero ? "text-ink/35" : "text-ink",
+                    )}
+                  >
+                    {s.value}
+                  </span>
+                  {s.hint ? (
+                    <span
+                      className={cx(
+                        "inline-flex min-w-0 items-center gap-1 truncate rounded-full px-1.5 py-0.5 text-[10.5px] font-medium",
+                        s.alert || s.live ? tone.pill : "bg-canvas text-muted",
+                      )}
+                    >
+                      {s.live ? <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500" /> : null}
+                      <span className="truncate">{s.hint}</span>
+                    </span>
+                  ) : null}
+                </span>
               </span>
-            </span>
-          </Link>
-        ))}
+              <span
+                className={cx(
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition group-hover:scale-105",
+                  tone.icon,
+                )}
+              >
+                <Icon className="h-4 w-4" />
+              </span>
+            </Link>
+          );
+        })}
       </div>
 
-      {week.onDuty.length ? (
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] text-emerald-800">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          Im Dienst: {week.onDuty.map((d) => `${d.name} seit ${timeFmt.format(new Date(d.since))}`).join(" · ")}
-        </p>
-      ) : null}
 
       <div id="wochenplan" className="scroll-mt-20">
         <WeekTasks />
