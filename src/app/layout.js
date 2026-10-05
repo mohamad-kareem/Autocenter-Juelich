@@ -5,6 +5,7 @@ import Footer from "@/app/(components)/Footer";
 import CookieBanner from "@/app/(components)/CookieBanner";
 import ChatWidget from "@/app/(components)/ChatWidget";
 import PublicOnly from "@/app/(components)/PublicOnly";
+import VisitTracker from "@/app/(components)/VisitTracker";
 import { SITE } from "@/lib/site";
 
 // Inter (SIL Open Font License) – self-hosted, no requests to Google Fonts (DSGVO-friendly)
@@ -93,6 +94,7 @@ export default function RootLayout({ children }) {
           <ChatWidget />
           <CookieBanner />
         </PublicOnly>
+        <VisitTracker />
       </body>
     </html>
   );
