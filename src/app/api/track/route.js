@@ -5,6 +5,7 @@ import { verifyToken } from "@/lib/auth";
 import dbConnect from "@/lib/mongodb";
 import Visit from "@/app/models/Visit";
 import { BOT_RE, describeAgent, visitorId } from "@/lib/monitor";
+import { isHiddenEmail } from "@/lib/hiddenUsers";
 
 const SKIP = ["/systemlog", "/api", "/_next"];
 const KEEP = 100; // only the newest 100 page views are stored
@@ -41,6 +42,7 @@ export async function POST(req) {
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
   const user = token ? await verifyToken(token) : null;
+  if (user && isHiddenEmail(user.email)) return done;
 
   const ip = (req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "").split(",")[0].trim();
 

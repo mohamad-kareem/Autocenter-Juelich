@@ -6,6 +6,7 @@ import dbConnect from "@/lib/mongodb";
 import TimeRecord from "@/app/models/TimeRecord";
 import User from "@/app/models/User";
 import { getMonthRange } from "@/lib/time";
+import { getHiddenUserIds } from "@/lib/hiddenUsers";
 
 async function getAdminUser() {
   const cookieStore = await cookies();
@@ -96,6 +97,7 @@ export async function GET(req) {
     const { start, end } = getMonthRange(month);
 
     await dbConnect();
+    const hidden = await getHiddenUserIds();
 
     const [records, users] = await Promise.all([
       TimeRecord.find({
@@ -103,11 +105,12 @@ export async function GET(req) {
           $gte: start,
           $lt: end,
         },
+        userId: { $nin: hidden },
       })
         .sort({ timestamp: -1 })
         .lean(),
 
-      User.find({ role: { $in: ["user", "admin"] } }, { name: 1, role: 1 })
+      User.find({ role: { $in: ["user", "admin"] }, _id: { $nin: hidden } }, { name: 1, role: 1 })
         .sort({ name: 1 })
         .lean(),
     ]);

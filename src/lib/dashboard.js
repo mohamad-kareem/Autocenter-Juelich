@@ -3,6 +3,7 @@ import ContactMessage from "@/app/models/ContactMessage";
 import TimeRecord from "@/app/models/TimeRecord";
 import Task from "@/app/models/Task";
 import { getCarsSafe } from "@/lib/mobilede";
+import { getHiddenUserIds } from "@/lib/hiddenUsers";
 
 /** Never let a slow or offline database block the dashboard. */
 async function withTimeout(factory, fallback, ms = 2500) {
@@ -103,6 +104,7 @@ async function getWeekTime({ userId, isAdmin }) {
 
       const filter = { timestamp: { $gte: week.start, $lt: week.end } };
       if (!isAdmin) filter.userId = userId;
+      else filter.userId = { $nin: await getHiddenUserIds() };
 
       const records = await TimeRecord.find(filter)
         .select("userId userName action timestamp")

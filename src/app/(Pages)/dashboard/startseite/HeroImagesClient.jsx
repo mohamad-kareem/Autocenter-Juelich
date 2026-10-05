@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Eye, EyeOff, ImagePlus, Loader2, Trash2, UploadCloud } from "lucide-react";
+import {
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  ImagePlus,
+  Loader2,
+  Trash2,
+  UploadCloud,
+} from "lucide-react";
 
 const cx = (...c) => c.filter(Boolean).join(" ");
 
@@ -18,7 +26,10 @@ export default function HeroImagesClient() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Bilder der Startseite</h1>
-          <p className="text-sm text-muted">Hintergrundbilder und das Foto im Abschnitt „Autokauf mit gutem Gefühl“.</p>
+          <p className="text-sm text-muted">
+            Hintergrundbilder und das Foto im Abschnitt „Autokauf mit gutem
+            Gefühl“.
+          </p>
         </div>
         <Link href="/" target="_blank" className="btn btn-secondary btn-sm">
           Startseite ansehen
@@ -28,14 +39,14 @@ export default function HeroImagesClient() {
       <ImageSection
         slot="hero"
         title="Hintergrundbilder (großer Bereich oben)"
-        hint="Die Bilder wechseln auf der Startseite alle 8 Sekunden. Querformat empfohlen."
+        hint="Die Bilder wechseln auf der Startseite alle 8 Sekunden."
         ordered
       />
 
       <ImageSection
         slot="about"
         title="Foto im Abschnitt „Autokauf mit gutem Gefühl“"
-        hint="Ein Bild, möglichst im Querformat (4:3). Ohne eigenes Bild wird das mitgelieferte Showroom-Foto gezeigt."
+        hint="Ein Bild, möglichst im Querformat (4:3)."
       />
     </div>
   );
@@ -53,7 +64,9 @@ function ImageSection({ slot, title, hint, ordered = false }) {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/hero-images?slot=${slot}`, { cache: "no-store" });
+      const res = await fetch(`/api/hero-images?slot=${slot}`, {
+        cache: "no-store",
+      });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || "Bilder konnten nicht geladen werden.");
@@ -122,7 +135,10 @@ function ImageSection({ slot, title, hint, ordered = false }) {
         setError(data.error || "Änderung fehlgeschlagen.");
         return false;
       }
-      if (reload) setImages((list) => list.map((img) => (img._id === id ? data.image : img)));
+      if (reload)
+        setImages((list) =>
+          list.map((img) => (img._id === id ? data.image : img)),
+        );
       return true;
     } catch {
       setError("Keine Verbindung zum Server.");
@@ -162,7 +178,11 @@ function ImageSection({ slot, title, hint, ordered = false }) {
 
     setBusyId(id);
     await Promise.all(
-      list.map((img, index) => (img.sort === index ? null : patch(img._id, { sort: index }, { reload: false }))),
+      list.map((img, index) =>
+        img.sort === index
+          ? null
+          : patch(img._id, { sort: index }, { reload: false }),
+      ),
     );
     setBusyId(null);
     load();
@@ -196,15 +216,20 @@ function ImageSection({ slot, title, hint, ordered = false }) {
         }}
         className={cx(
           "mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-dashed px-4 py-4 transition",
-          dragOver ? "border-brand-500 bg-brand-50" : "border-line-strong bg-white",
+          dragOver
+            ? "border-brand-500 bg-brand-50"
+            : "border-line-strong bg-white",
           full && "opacity-60",
         )}
       >
         <p className="flex items-center gap-2.5 text-[13px] text-muted">
           <UploadCloud className="h-5 w-5 shrink-0 text-brand-600" />
           <span>
-            <span className="block font-medium text-ink">Bild hierher ziehen oder auswählen</span>
-            JPG, PNG, WebP oder AVIF · max. 12 MB · {images.length} von {max} belegt
+            <span className="block font-medium text-ink">
+              Bild hierher ziehen oder auswählen
+            </span>
+            JPG, PNG, WebP oder AVIF · max. 12 MB · {images.length} von {max}{" "}
+            belegt
           </span>
         </p>
         <button
@@ -213,7 +238,11 @@ function ImageSection({ slot, title, hint, ordered = false }) {
           disabled={uploading || full}
           className="btn btn-primary btn-sm"
         >
-          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+          {uploading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <ImagePlus className="h-4 w-4" />
+          )}
           {uploading ? "Wird hochgeladen …" : "Bild auswählen"}
         </button>
         <input
@@ -241,22 +270,44 @@ function ImageSection({ slot, title, hint, ordered = false }) {
             Noch kein eigenes Bild – es wird das mitgelieferte Foto angezeigt.
           </div>
         ) : (
-          <ul className={cx("grid gap-3", max > 1 ? "sm:grid-cols-2 xl:grid-cols-3" : "sm:max-w-md")}>
+          <ul
+            className={cx(
+              "grid gap-3",
+              max > 1 ? "sm:grid-cols-2 xl:grid-cols-3" : "sm:max-w-md",
+            )}
+          >
             {images.map((img, i) => (
-              <li key={img._id} className={cx("card overflow-hidden", !img.active && "opacity-70")}>
+              <li
+                key={img._id}
+                className={cx(
+                  "card overflow-hidden",
+                  !img.active && "opacity-70",
+                )}
+              >
                 <div className="relative aspect-[16/9] bg-canvas">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.url} alt={img.alt} className="h-full w-full object-cover" />
+                  <img
+                    src={img.url}
+                    alt={img.alt}
+                    className="h-full w-full object-cover"
+                  />
                   {ordered ? (
-                    <span className="chip absolute left-2 top-2 bg-navy-950/70 text-white">{i + 1}. Bild</span>
+                    <span className="chip absolute left-2 top-2 bg-navy-950/70 text-white">
+                      {i + 1}. Bild
+                    </span>
                   ) : null}
                   {!img.active ? (
-                    <span className="chip absolute right-2 top-2 bg-slate-900/80 text-white">Ausgeblendet</span>
+                    <span className="chip absolute right-2 top-2 bg-slate-900/80 text-white">
+                      Ausgeblendet
+                    </span>
                   ) : null}
                 </div>
 
                 <div className="space-y-2.5 p-3">
-                  <p className="truncate text-xs text-muted" title={img.fileName}>
+                  <p
+                    className="truncate text-xs text-muted"
+                    title={img.fileName}
+                  >
                     {img.fileName || "Bild"} · {formatBytes(img.bytes)}
                     {img.width ? ` · ${img.width}×${img.height}` : ""}
                   </p>
@@ -285,13 +336,16 @@ function ImageSection({ slot, title, hint, ordered = false }) {
                       <select
                         id={`pos-${img._id}`}
                         value={i}
-                        onChange={(e) => moveTo(img._id, Number(e.target.value))}
+                        onChange={(e) =>
+                          moveTo(img._id, Number(e.target.value))
+                        }
                         disabled={busyId === img._id}
                         className="field h-8 text-[13px]"
                       >
                         {images.map((_, index) => (
                           <option key={index} value={index}>
-                            {index + 1}. Bild {index === 0 ? "(wird zuerst gezeigt)" : ""}
+                            {index + 1}. Bild{" "}
+                            {index === 0 ? "(wird zuerst gezeigt)" : ""}
                           </option>
                         ))}
                       </select>
@@ -305,7 +359,11 @@ function ImageSection({ slot, title, hint, ordered = false }) {
                       disabled={busyId === img._id}
                       className="btn btn-secondary btn-sm"
                     >
-                      {img.active ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      {img.active ? (
+                        <EyeOff className="h-3.5 w-3.5" />
+                      ) : (
+                        <Eye className="h-3.5 w-3.5" />
+                      )}
                       {img.active ? "Ausblenden" : "Einblenden"}
                     </button>
                     <button

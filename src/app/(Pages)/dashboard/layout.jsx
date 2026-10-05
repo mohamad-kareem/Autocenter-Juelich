@@ -4,6 +4,7 @@ import UserMenu from "@/app/(components)/UserMenu";
 import { verifyToken } from "@/lib/auth";
 import dbConnect from "@/lib/mongodb";
 import ContactMessage from "@/app/models/ContactMessage";
+import TradeIn from "@/app/models/TradeIn";
 
 export const metadata = {
   title: "Mitarbeiterbereich",
@@ -11,11 +12,11 @@ export const metadata = {
 };
 
 /** Unread badge – never blocks the page if the database is slow or offline. */
-async function countUnread() {
+async function countUnread(Model) {
   const timeout = new Promise((resolve) => setTimeout(() => resolve(0), 2000));
   const query = (async () => {
     await dbConnect();
-    return ContactMessage.countDocuments({ read: false }).maxTimeMS(1500);
+    return Model.countDocuments({ read: false }).maxTimeMS(1500);
   })().catch(() => 0);
   return (await Promise.race([query, timeout])) ?? 0;
 }
@@ -25,7 +26,9 @@ export default async function DashboardLayout({ children }) {
   const token = cookieStore.get("token")?.value;
   const user = token ? await verifyToken(token) : null;
   const role = user?.role === "admin" ? "admin" : "user";
-  const unread = user ? await countUnread() : 0;
+  const [unread, tradeins] = user
+    ? await Promise.all([countUnread(ContactMessage), countUnread(TradeIn)])
+    : [0, 0];
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -35,7 +38,7 @@ export default async function DashboardLayout({ children }) {
             {/* renders the fixed sidebar, the mobile button and the drawer */}
             <DashboardNav
               role={role}
-              badges={{ unread }}
+              badges={{ unread, tradeins }}
               user={user ? { name: user.name, role: user.role } : null}
             />
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Händlerportal</p>

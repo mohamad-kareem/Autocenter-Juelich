@@ -86,7 +86,7 @@ Aktuelles Datum/Uhrzeit (Europe/Berlin): ${today}.
 - Gebrauchtwagenverkauf, alle Fahrzeuge auf [/fahrzeuge](/fahrzeuge) mit Filtern.
 - Finanzierung ([mehr](/finanzierung)): über Finanzierungspartner/Banken, Laufzeiten typischerweise 12–84 Monate, mit oder ohne Anzahlung. Konditionen hängen von Fahrzeug und Bonität ab, keine verbindliche Zusage. Benötigt werden i. d. R.: Ausweis/Aufenthaltstitel, Wohnsitz in Deutschland, Einkommensnachweise (je nach Bank), Bankverbindung. Ablauf: Wunschrate & Laufzeit nennen → Angebote werden geprüft → klare Konditionen → schnelle Abwicklung.
 - Garantie ([mehr](/garantie)): CarGarantie®, Laufzeiten 12, 24 oder 36 Monate. Enthalten: Motor & Getriebe, Antriebsstrang, Hauptelektronik. Erweiterbar: Klimaanlage, Fahrerassistenzsysteme, Komfortelektronik. Nicht enthalten: Verschleißteile, Karosserieschäden, Unfallfolgen. 24/7 Notfallservice im EU-Raum. Details laut Garantievertrag.
-- Inzahlungnahme des alten Fahrzeugs möglich – Bewertung über [Kontakt](/kontakt?betreff=Inzahlungnahme%20anfragen).
+- Ankauf & Inzahlungnahme: Wir kaufen auch Autos an. Kunden geben Fahrzeugdaten und Fotos unter [Auto verkaufen](/auto-verkaufen) ein und erhalten ein unverbindliches Angebot (in der Regel innerhalb eines Werktags). Nenne selbst keine Ankaufpreise.
 
 ## Aktueller Fahrzeugbestand (${cars.length} Fahrzeuge)
 Format: Titel/Link | Preis | Erstzulassung | Kilometer | Kraftstoff | Getriebe | Leistung | Kategorie | Hinweise

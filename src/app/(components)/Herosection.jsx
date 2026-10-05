@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Search, Star } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Search, Star } from "lucide-react";
 import { PRICE_STEPS, formatNumber, fuelLabel, prettyBrand } from "@/lib/cars";
 import { SITE } from "@/lib/site";
 
@@ -194,110 +194,173 @@ export default function HeroSectionWithSearch({ cars = [], rating, slides }) {
         </div>
       </div>
 
-      {/* Floating search panel */}
-      <div className="container-ac relative z-10 -mt-24 lg:-mt-24">
+      {/* Floating search – clean card, custom dropdowns, compact mirror button */}
+      <div className="container-ac relative z-10 -mt-24">
         <form
           onSubmit={submit}
-          className="rounded-xl bg-white p-3 shadow-[0_20px_50px_-12px_rgba(6,15,29,0.35)] ring-1 ring-black/5 sm:p-4"
+          className="rounded-2xl bg-white p-4 shadow-[0_24px_60px_-24px_rgba(6,15,29,0.55)] ring-1 ring-black/5 sm:p-5"
         >
-          <div className="mb-3 flex items-center justify-between">
-            <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-              <Search className="h-4 w-4 text-brand-600" />
+          <div className="mb-3.5 flex items-center justify-between">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink">
               Fahrzeug finden
             </p>
             <Link
               href="/fahrzeuge"
-              className="link hidden items-center gap-0.5 text-xs sm:inline-flex"
+              className="inline-flex items-center gap-1 text-[12px] font-medium text-muted transition hover:text-ink"
             >
               Erweiterte Suche
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-[1.3fr_1fr_1fr_1fr_auto]">
-            <div className="col-span-2 lg:col-span-1">
-              <label htmlFor="hs-brand" className="label">
-                Marke
-              </label>
-              <select
-                id="hs-brand"
-                value={brand}
-                onChange={(e) => setBrand(e.target.value)}
-                className="field"
-              >
-                <option value="">Alle Marken</option>
-                {brands.map(([b, n]) => (
-                  <option key={b} value={b}>
-                    {prettyBrand(b)} ({n})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="hs-price" className="label">
-                Preis bis
-              </label>
-              <select
-                id="hs-price"
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
-                className="field"
-              >
-                <option value="">Beliebig</option>
-                {PRICE_STEPS.map((p) => (
-                  <option key={p} value={p}>
-                    {formatNumber(p)} €
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="hs-year" className="label">
-                Erstzulassung ab
-              </label>
-              <select
-                id="hs-year"
-                value={yearFrom}
-                onChange={(e) => setYearFrom(e.target.value)}
-                className="field"
-              >
-                <option value="">Beliebig</option>
-                {years.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="col-span-2 sm:col-span-1">
-              <label htmlFor="hs-fuel" className="label">
-                Kraftstoff
-              </label>
-              <select
-                id="hs-fuel"
-                value={fuel}
-                onChange={(e) => setFuel(e.target.value)}
-                className="field"
-              >
-                <option value="">Beliebig</option>
-                {fuels.map((f) => (
-                  <option key={f} value={f}>
-                    {fuelLabel(f)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="col-span-2 flex items-end sm:col-span-1">
-              <button
-                type="submit"
-                className="btn btn-primary w-full lg:w-auto lg:min-w-44"
-              >
-                <Search className="h-4 w-4" />
-                {matchCount} {matchCount === 1 ? "Angebot" : "Angebote"}
-              </button>
-            </div>
+
+          <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
+            <Dropdown
+              label="Marke"
+              placeholder="Alle Marken"
+              value={brand}
+              onChange={setBrand}
+              options={brands.map(([b, n]) => ({ value: b, label: prettyBrand(b), meta: n }))}
+            />
+            <Dropdown
+              label="Preis bis"
+              placeholder="Beliebig"
+              value={maxPrice}
+              onChange={setMaxPrice}
+              options={PRICE_STEPS.map((p) => ({ value: String(p), label: `${formatNumber(p)} €` }))}
+            />
+            <Dropdown
+              label="Erstzulassung ab"
+              shortLabel="Erstzulassung"
+              placeholder="Beliebig"
+              value={yearFrom}
+              onChange={setYearFrom}
+              options={years.map((y) => ({ value: String(y), label: String(y) }))}
+            />
+            <Dropdown
+              label="Kraftstoff"
+              placeholder="Beliebig"
+              value={fuel}
+              onChange={setFuel}
+              options={fuels.map((f) => ({ value: f, label: fuelLabel(f) }))}
+            />
+
+            <button
+              type="submit"
+              className="btn-mirror group col-span-2 inline-flex h-12 items-center justify-center gap-2 rounded-lg px-5 text-[13px] font-semibold text-white lg:col-span-1"
+            >
+              <Search className="h-4 w-4 opacity-80" />
+              <span className="tabular-nums">{matchCount}</span>
+              {matchCount === 1 ? "Angebot" : "Angebote"}
+            </button>
           </div>
         </form>
       </div>
     </section>
+  );
+}
+
+/** Custom select: label + value field, opens a clean option list. */
+function Dropdown({ label, shortLabel, placeholder, value, onChange, options }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const listRef = useRef(null);
+  const all = [{ value: "", label: placeholder }, ...options];
+  const current = all.find((o) => o.value === value) || all[0];
+
+  useEffect(() => {
+    if (!open) return;
+    listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
+    const onDown = (e) => {
+      if (!ref.current?.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  function onListKey(e) {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    const items = [...(listRef.current?.querySelectorAll("button") || [])];
+    const i = items.indexOf(document.activeElement);
+    const next = e.key === "ArrowDown" ? Math.min(i + 1, items.length - 1) : Math.max(i - 1, 0);
+    items[next]?.focus();
+  }
+
+  return (
+    <div ref={ref} className="relative min-w-0">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown" && !open) {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
+        className={cx(
+          "flex h-12 w-full items-center gap-2 rounded-lg border bg-canvas/60 px-3.5 text-left transition",
+          open ? "border-ink/30 bg-white" : "border-line hover:border-line-strong hover:bg-white",
+        )}
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-muted sm:tracking-[0.12em]">
+            {shortLabel ? (
+              <>
+                <span className="sm:hidden">{shortLabel}</span>
+                <span className="hidden sm:inline">{label}</span>
+              </>
+            ) : (
+              label
+            )}
+          </span>
+          <span className={cx("block truncate text-[13px] font-medium", value ? "text-ink" : "text-ink/60")}>
+            {current.label}
+          </span>
+        </span>
+        <ChevronDown className={cx("h-4 w-4 shrink-0 text-muted transition", open && "rotate-180 text-ink")} />
+      </button>
+
+      {open ? (
+        <ul
+          ref={listRef}
+          role="listbox"
+          aria-label={label}
+          onKeyDown={onListKey}
+          className="scroll-slim animate-pop-in absolute left-0 top-full z-30 mt-1.5 max-h-64 w-full overflow-y-auto rounded-xl border border-line bg-white p-1 shadow-float"
+        >
+          {all.map((o) => {
+            const selected = o.value === value;
+            return (
+              <li key={o.value || "_all"}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => {
+                    onChange(o.value);
+                    setOpen(false);
+                  }}
+                  className={cx(
+                    "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] outline-none transition hover:bg-canvas focus-visible:bg-canvas",
+                    selected ? "font-semibold text-ink" : "text-ink/80",
+                  )}
+                >
+                  <span className="flex-1 truncate">{o.label}</span>
+                  {o.meta != null ? <span className="text-[11px] tabular-nums text-muted">{o.meta}</span> : null}
+                  <Check className={cx("h-3.5 w-3.5 shrink-0 text-brand-600", !selected && "invisible")} />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </div>
   );
 }

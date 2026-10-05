@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   CalendarCheck,
+  CarFront,
   ChevronsLeft,
   Clock,
   ExternalLink,
@@ -31,6 +32,7 @@ const GROUPS = [
     title: "Kunden",
     items: [
       { label: "Anfragen", href: "/dashboard/anfragen", icon: Inbox, color: "text-emerald-600", roles: ["user", "admin"], badgeKey: "unread" },
+      { label: "Ankauf", href: "/dashboard/ankauf", icon: CarFront, color: "text-sky-600", roles: ["user", "admin"], badgeKey: "tradeins" },
       { label: "Wochenplan", href: "/dashboard/wochenplan", icon: CalendarCheck, color: "text-violet-600", roles: ["user", "admin"] },
     ],
   },

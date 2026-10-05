@@ -26,7 +26,7 @@ const BENEFITS = [
     icon: Repeat,
     title: "Inzahlungnahme",
     text: "Faire Bewertung, direkt verrechnet.",
-    href: "/kontakt?betreff=Inzahlungnahme%20anfragen",
+    href: "/auto-verkaufen",
   },
 ];
 

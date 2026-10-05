@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import dbConnect from "@/lib/mongodb";
 import ContactMessage, { MESSAGE_STATUS } from "@/app/models/ContactMessage";
 import { getAdminUser, getStaffUser, serializeMessage } from "@/lib/messages";
+import { isHiddenEmail } from "@/lib/hiddenUsers";
 
 function isValidId(id) {
   return mongoose.Types.ObjectId.isValid(String(id || ""));
@@ -32,8 +33,11 @@ export async function PATCH(req, { params }) {
       return Response.json({ error: "Ungültiger Status." }, { status: 400 });
     }
     update.status = body.status;
-    update.handledBy = admin.name || admin.email || "Team";
-    update.handledAt = new Date();
+    // test accounts change the status without leaving their name behind
+    if (!isHiddenEmail(admin.email)) {
+      update.handledBy = admin.name || admin.email || "Team";
+      update.handledAt = new Date();
+    }
     if (body.status !== "new") update.read = true;
   }
 

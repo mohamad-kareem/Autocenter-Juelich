@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, CalendarCheck, MapPin, Menu, Phone, X } from "lucide-react";
+import { ArrowRight, CalendarCheck, ChevronDown, MapPin, Menu, Phone, X } from "lucide-react";
 import Logo from "./Logo";
 import UserMenu, { initialsOf } from "./UserMenu";
 import useSession from "./useSession";
@@ -13,10 +13,19 @@ const cx = (...c) => c.filter(Boolean).join(" ");
 
 const NAV = [
   { label: "Fahrzeuge", href: "/fahrzeuge" },
-  { label: "Finanzierung", href: "/finanzierung" },
-  { label: "Garantie", href: "/garantie" },
+  {
+    label: "Service",
+    children: [
+      { label: "Finanzierung", href: "/finanzierung", text: "Laufzeiten von 12 bis 84 Monaten" },
+      { label: "CarGarantie®", href: "/garantie", text: "12, 24 oder 36 Monate Schutz" },
+    ],
+  },
+  { label: "Auto verkaufen", href: "/auto-verkaufen" },
   { label: "Kontakt", href: "/kontakt" },
 ];
+
+/** Flat list for the mobile menu */
+const FLAT_NAV = NAV.flatMap((item) => item.children || [item]);
 
 function useOpeningStatus() {
   const [status, setStatus] = useState(null);
@@ -37,6 +46,7 @@ export default function Navbar() {
   const isHome = pathname === "/";
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [openMenu, setOpenMenu] = useState(null);
   const status = useOpeningStatus();
   const user = useSession();
 
@@ -44,6 +54,7 @@ export default function Navbar() {
   if (pathname !== lastPath) {
     setLastPath(pathname);
     setOpen(false);
+    setOpenMenu(null);
   }
 
   useEffect(() => {
@@ -81,25 +92,72 @@ export default function Navbar() {
           <Logo className="h-8 w-auto lg:h-9" priority />
 
           {/* Center navigation */}
-          <ul className="hidden items-center justify-center gap-1 md:flex">
+          <ul className="hidden items-center justify-center gap-2 lg:flex xl:gap-4">
             {NAV.map((item) => {
-              const active = isActive(item.href);
+              const active = item.children ? item.children.some((c) => isActive(c.href)) : isActive(item.href);
+              const linkCls = cx(
+                "group relative inline-flex h-10 items-center gap-1 whitespace-nowrap px-3 text-[13px] font-medium uppercase tracking-[0.14em] transition-colors",
+                active ? "text-white" : "text-white/70 hover:text-white",
+              );
+              const underline = (
+                <span
+                  className={cx(
+                    "absolute bottom-1 left-1/2 h-px -translate-x-1/2 bg-accent-400 transition-all duration-300",
+                    active ? "w-6" : "w-0 group-hover:w-6",
+                  )}
+                />
+              );
+
+              if (item.children) {
+                const isOpen = openMenu === item.label;
+                return (
+                  <li
+                    key={item.label}
+                    className="relative"
+                    onMouseEnter={() => setOpenMenu(item.label)}
+                    onMouseLeave={() => setOpenMenu(null)}
+                  >
+                    <button
+                      type="button"
+                      aria-haspopup="true"
+                      aria-expanded={isOpen}
+                      onClick={() => setOpenMenu(isOpen ? null : item.label)}
+                      className={linkCls}
+                    >
+                      {item.label}
+                      <ChevronDown className={cx("h-3.5 w-3.5 transition", isOpen && "rotate-180")} />
+                      {underline}
+                    </button>
+                    {isOpen ? (
+                      <div className="absolute left-1/2 top-full w-64 -translate-x-1/2 pt-2">
+                        <ul className="animate-pop-in overflow-hidden rounded-xl border border-line bg-white p-1.5 shadow-float">
+                          {item.children.map((c) => (
+                            <li key={c.href}>
+                              <Link
+                                href={c.href}
+                                onClick={() => setOpenMenu(null)}
+                                className={cx(
+                                  "block rounded-lg px-3 py-2 transition hover:bg-canvas",
+                                  isActive(c.href) && "bg-canvas",
+                                )}
+                              >
+                                <span className="block text-[13px] font-semibold text-ink">{c.label}</span>
+                                <span className="block text-[12px] text-muted">{c.text}</span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </li>
+                );
+              }
+
               return (
                 <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className={cx(
-                      "group relative inline-flex h-10 items-center px-4 text-[13px] font-medium uppercase tracking-[0.14em] transition-colors",
-                      active ? "text-white" : "text-white/70 hover:text-white",
-                    )}
-                  >
+                  <Link href={item.href} className={linkCls}>
                     {item.label}
-                    <span
-                      className={cx(
-                        "absolute bottom-1 left-1/2 h-px -translate-x-1/2 bg-accent-400 transition-all duration-300",
-                        active ? "w-6" : "w-0 group-hover:w-6",
-                      )}
-                    />
+                    {underline}
                   </Link>
                 </li>
               );
@@ -107,7 +165,7 @@ export default function Navbar() {
           </ul>
 
           {/* Right actions */}
-          <div className="hidden items-center justify-end gap-4 md:flex">
+          <div className="hidden items-center justify-end gap-4 lg:flex">
             <Link
               href="/kontakt?betreff=Probefahrt%20vereinbaren"
               className="inline-flex h-9 items-center rounded-full border border-white/30 px-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition hover:border-white hover:bg-white hover:text-navy-900"
@@ -123,7 +181,7 @@ export default function Navbar() {
           </div>
 
           {/* Mobile toggle */}
-          <div className="flex items-center justify-end gap-1 md:hidden">
+          <div className="flex items-center justify-end gap-1 lg:hidden">
             {user && !open ? <UserMenu user={user} variant="dark" showWebsiteLink={false} /> : null}
             <a
               href={SITE.phoneHref}
@@ -151,7 +209,7 @@ export default function Navbar() {
       {/* Mobile full-screen menu */}
       <div
         className={cx(
-          "fixed inset-0 z-[68] flex flex-col bg-navy-950 pt-16 transition-all duration-300 md:hidden",
+          "fixed inset-0 z-[68] flex flex-col bg-navy-950 pt-16 transition-all duration-300 lg:hidden",
           open ? "visible opacity-100" : "invisible opacity-0",
         )}
         aria-hidden={!open}
@@ -159,7 +217,7 @@ export default function Navbar() {
         <div className="pointer-events-none absolute -right-24 top-24 h-72 w-72 rounded-full bg-brand-600/25 blur-3xl" />
         <nav className="container-ac relative flex-1 overflow-y-auto pt-8">
           <ul className="space-y-1">
-            {[{ label: "Startseite", href: "/" }, ...NAV].map((item, i) => {
+            {[{ label: "Startseite", href: "/" }, ...FLAT_NAV].map((item, i) => {
               const active = item.href === "/" ? isHome : isActive(item.href);
               return (
                 <li

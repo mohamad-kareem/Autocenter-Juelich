@@ -11,7 +11,7 @@ const COLUMNS = [
       { label: "Alle Fahrzeuge", href: "/fahrzeuge" },
       { label: "Finanzierung", href: "/finanzierung" },
       { label: "CarGarantie®", href: "/garantie" },
-      { label: "Inzahlungnahme", href: "/kontakt?betreff=Inzahlungnahme%20anfragen" },
+      { label: "Auto verkaufen", href: "/auto-verkaufen" },
     ],
   },
   {
