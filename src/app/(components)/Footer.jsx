@@ -34,7 +34,6 @@ export default function Footer() {
         <div>
           <Logo className="h-8 w-auto" />
           <address className="mt-4 space-y-0.5 not-italic leading-relaxed">
-            <span className="block text-white/85">{SITE.name}</span>
             {SITE.street}
             <br />
             {SITE.zip} {SITE.city}
@@ -70,9 +69,9 @@ export default function Footer() {
           <h3 className="text-[11px] font-semibold uppercase tracking-wider text-white">Öffnungszeiten</h3>
           <dl className="mt-4 space-y-2">
             {SITE.openingHours.map((h) => (
-              <div key={h.days} className="flex justify-between gap-4">
+              <div key={h.days} className="grid grid-cols-[3.25rem_1fr] gap-x-2">
                 <dt>{h.short}</dt>
-                <dd className="text-right text-white/85">{h.time}</dd>
+                <dd className="text-white/85">{h.time}</dd>
               </div>
             ))}
           </dl>
@@ -82,9 +81,7 @@ export default function Footer() {
 
       <div className="border-t border-white/15">
         <div className="container-ac flex flex-col gap-1.5 py-4 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            © {year} {SITE.name} · Inhaber {SITE.legalOwner}
-          </p>
+          <p>© {year} · Alle Rechte vorbehalten</p>
           <Link href="/login" className="inline-flex items-center gap-1 transition hover:text-white">
             <Lock className="h-3 w-3" />
             Mitarbeiter

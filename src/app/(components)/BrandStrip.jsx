@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { prettyBrand } from "@/lib/cars";
 
 /** Brand row like the big portals: every make in stock with its count. */
@@ -13,13 +12,7 @@ export default function BrandStrip({ cars = [] }) {
 
   return (
     <section className="container-ac mt-10">
-      <div className="flex items-end justify-between gap-4">
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Marken im Bestand</h2>
-        <Link href="/fahrzeuge" className="inline-flex items-center gap-1 text-[13px] font-medium text-brand-600 hover:text-brand-700">
-          Alle Fahrzeuge
-          <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
-      </div>
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Marken im Bestand</h2>
 
       <ul className="mt-3 flex flex-wrap gap-2">
         {brands.map(([brand, count]) => (

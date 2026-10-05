@@ -1,6 +1,8 @@
 import dbConnect from "@/lib/mongodb";
 import ContactMessage from "@/app/models/ContactMessage";
 import TimeRecord from "@/app/models/TimeRecord";
+import Task from "@/app/models/Task";
+import { getCarsSafe } from "@/lib/mobilede";
 
 /** Never let a slow or offline database block the dashboard. */
 async function withTimeout(factory, fallback, ms = 2500) {
@@ -151,12 +153,39 @@ async function getWeekTime({ userId, isAdmin }) {
   );
 }
 
+/** Open tasks from the Wochenplan: today and the rest of this week. */
+async function getTaskStats() {
+  const berlinDay = (d) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Berlin" }).format(d);
+  const { start, end } = getWeek();
+  const lastDay = new Date(end);
+  lastDay.setDate(lastDay.getDate() - 1);
+
+  return withTimeout(
+    async () => {
+      await dbConnect();
+      const [today, week] = await Promise.all([
+        Task.countDocuments({ day: berlinDay(new Date()), status: "open" }).maxTimeMS(2000),
+        Task.countDocuments({ day: { $gte: berlinDay(start), $lte: berlinDay(lastDay) }, status: "open" }).maxTimeMS(2000),
+      ]);
+      return { today, week };
+    },
+    { today: 0, week: 0 },
+  );
+}
+
+/** Vehicles currently online on mobile.de (same cached source as the website). */
+async function getCarCount() {
+  return withTimeout(async () => (await getCarsSafe()).length, null, 4000);
+}
+
 /** Everything the dashboard overview needs, in one call. */
 export async function getDashboardData({ userId, isAdmin }) {
-  const [messages, week] = await Promise.all([
+  const [messages, week, tasks, cars] = await Promise.all([
     isAdmin ? getMessageStats() : Promise.resolve(null),
     getWeekTime({ userId, isAdmin }),
+    getTaskStats(),
+    isAdmin ? getCarCount() : Promise.resolve(null),
   ]);
 
-  return { messages, week };
+  return { messages, week, tasks, cars };
 }

@@ -108,24 +108,6 @@ export default function Navbar() {
 
           {/* Right actions */}
           <div className="hidden items-center justify-end gap-4 md:flex">
-            <a href={SITE.phoneHref} className="group hidden items-center gap-2.5 text-white lg:flex">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 transition group-hover:border-accent-400 group-hover:bg-white/5">
-                <Phone className="h-3.5 w-3.5" />
-              </span>
-              <span className="leading-tight">
-                <span className="flex items-center gap-1.5 text-[11px] text-white/55">
-                  {status ? (
-                    <>
-                      <span className={cx("h-1.5 w-1.5 rounded-full", status.open ? "bg-emerald-400" : "bg-rose-400")} />
-                      {status.open ? "Jetzt geöffnet" : "Geschlossen"}
-                    </>
-                  ) : (
-                    "Rufen Sie uns an"
-                  )}
-                </span>
-                <span className="block text-sm font-semibold tracking-wide">{SITE.phoneDisplay}</span>
-              </span>
-            </a>
             <Link
               href="/kontakt?betreff=Probefahrt%20vereinbaren"
               className="inline-flex h-9 items-center rounded-full border border-white/30 px-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition hover:border-white hover:bg-white hover:text-navy-900"

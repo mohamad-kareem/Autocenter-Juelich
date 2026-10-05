@@ -2,6 +2,7 @@
 // structured data and the AI chat assistant. Update here once.
 
 export const SITE = {
+  name: "Autocenter Jülich",
   legalOwner: "Jibrail Alawie",
   tagline: "Geprüfte Gebrauchtwagen in Jülich",
   url: "https://www.autocenter-juelich.de",

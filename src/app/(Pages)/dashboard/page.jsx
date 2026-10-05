@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, CircleDot, Clock, Inbox, ListChecks, Mail } from "lucide-react";
+import { ArrowRight, CalendarCheck, Car, CircleDot, Clock, Mail } from "lucide-react";
 import { verifyToken } from "@/lib/auth";
 import { getDashboardData, formatHours } from "@/lib/dashboard";
 import WeekTasks from "@/app/(components)/WeekTasks";
@@ -26,7 +26,7 @@ export default async function DashboardPage() {
   if (!user) redirect("/login");
 
   const isAdmin = user.role === "admin";
-  const { messages, week } = await getDashboardData({ userId: user.userId, isAdmin });
+  const { messages, week, tasks, cars } = await getDashboardData({ userId: user.userId, isAdmin });
 
   const hour = Number(
     new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", hourCycle: "h23" }).format(new Date()),
@@ -34,15 +34,30 @@ export default async function DashboardPage() {
   const greeting = hour < 11 ? "Guten Morgen" : hour < 18 ? "Guten Tag" : "Guten Abend";
   const today = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", dateStyle: "full" }).format(new Date());
 
+  const tasksTile = {
+    label: "Aufgaben heute",
+    value: tasks.today,
+    hint: `${tasks.week} offen diese Woche`,
+    href: "/dashboard/wochenplan",
+    icon: CalendarCheck,
+  };
+
   const stats = isAdmin
     ? [
-        { label: "Neue Anfragen", value: messages?.unread ?? 0, hint: "ungelesen", href: "/dashboard/anfragen", icon: Mail },
-        { label: "Offene Vorgänge", value: messages?.open ?? 0, hint: "neu oder in Arbeit", href: "/dashboard/anfragen", icon: Inbox },
-        { label: "Anfragen (7 Tage)", value: messages?.week ?? 0, hint: "eingegangen", href: "/dashboard/anfragen", icon: ListChecks },
-        { label: "Im Dienst", value: week.onDuty.length, hint: "gerade eingestempelt", href: "/dashboard/zeiterfassung", icon: CircleDot },
+        {
+          label: "Neue Anfragen",
+          value: messages?.unread ?? 0,
+          hint: `${messages?.open ?? 0} offen`,
+          href: "/dashboard/anfragen",
+          icon: Mail,
+        },
+        tasksTile,
+        { label: "Fahrzeuge online", value: cars ?? "–", hint: "auf mobile.de", href: "/fahrzeuge", icon: Car },
+        { label: "Im Dienst", value: week.onDuty.length, hint: "eingestempelt", href: "/dashboard/zeiterfassung", icon: CircleDot },
       ]
     : [
-        { label: "Diese Woche", value: formatHours(week.totalMinutes), hint: "erfasste Arbeitszeit", href: "/dashboard/stempeluhr", icon: Clock },
+        tasksTile,
+        { label: "Diese Woche", value: formatHours(week.totalMinutes), hint: "Arbeitszeit", href: "/dashboard/stempeluhr", icon: Clock },
         {
           label: "Status",
           value: week.onDuty.length ? "Eingestempelt" : "Ausgestempelt",
@@ -62,7 +77,7 @@ export default async function DashboardPage() {
         <p className="text-[12px] text-muted">{today}</p>
       </div>
 
-      <div className={cx("card grid divide-line overflow-hidden", isAdmin ? "grid-cols-2 lg:grid-cols-4 lg:divide-x" : "grid-cols-2 divide-x")}>
+      <div className={cx("card grid divide-line overflow-hidden", isAdmin ? "grid-cols-2 lg:grid-cols-4 lg:divide-x" : "grid-cols-1 divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0")}>
         {stats.map(({ icon: Icon, ...s }, i) => (
           <Link
             key={s.label}
@@ -78,7 +93,10 @@ export default async function DashboardPage() {
             </span>
             <span className="min-w-0">
               <span className="block text-lg font-bold leading-tight text-ink">{s.value}</span>
-              <span className="block truncate text-[11px] text-muted">{s.label}</span>
+              <span className="block truncate text-[11px] text-muted">
+                {s.label}
+                {s.hint ? <span className="text-muted/70"> · {s.hint}</span> : null}
+              </span>
             </span>
           </Link>
         ))}

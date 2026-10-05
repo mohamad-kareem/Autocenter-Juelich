@@ -150,14 +150,14 @@ export default function HeroSectionWithSearch({ cars = [], rating, slides }) {
               <span className="text-white/55">Geprüft in Jülich.</span>
             </h1>
             <p className="mt-5 max-w-md text-[15px] leading-relaxed text-white/70">
-              Ausgewählte Gebrauchtwagen, faire Finanzierung und CarGarantie® –
-              persönlich im Showroom.
+              Sorgfältig ausgewählte Gebrauchtwagen und ehrliche Beratung –
+              persönlich bei uns im Showroom.
             </p>
 
-            <div className="mt-7 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-wrap gap-2.5">
               <Link
                 href="/fahrzeuge"
-                className="inline-flex h-12 items-center rounded-full bg-white px-6 text-sm font-semibold text-navy-900 transition hover:bg-accent-300"
+                className="inline-flex h-10 items-center rounded-full bg-white px-5 text-[13px] font-semibold text-navy-900 transition hover:bg-accent-300"
               >
                 {cars.length
                   ? `${cars.length} Fahrzeuge ansehen`
@@ -165,7 +165,7 @@ export default function HeroSectionWithSearch({ cars = [], rating, slides }) {
               </Link>
               <Link
                 href="/kontakt?betreff=Probefahrt%20vereinbaren"
-                className="inline-flex h-12 items-center rounded-full border border-white/25 px-6 text-sm font-medium text-white transition hover:border-white/50 hover:bg-white/5"
+                className="inline-flex h-10 items-center rounded-full border border-white/25 px-5 text-[13px] font-medium text-white transition hover:border-white/50 hover:bg-white/5"
               >
                 Probefahrt anfragen
               </Link>
