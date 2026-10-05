@@ -8,16 +8,14 @@ export async function middleware(request) {
   const decoded = token ? await verifyToken(token) : null;
 
   const isLoginPage = pathname.startsWith("/login");
-  const isTaskApi = pathname.startsWith("/api/tasks");
+  const isTaskApi = pathname.startsWith("/api/tasks") || pathname.startsWith("/api/messages");
   const isDashboardPage = pathname.startsWith("/dashboard");
   const isAdminOnlyPage =
     pathname.startsWith("/dashboard/register") ||
-    pathname.startsWith("/dashboard/anfragen") ||
     pathname.startsWith("/dashboard/startseite") ||
     pathname.startsWith("/dashboard/zeiterfassung") ||
     pathname.startsWith("/api/auth/register") ||
-    pathname.startsWith("/api/time/records") ||
-    pathname.startsWith("/api/messages");
+    pathname.startsWith("/api/time/records");
 
   if (isTaskApi && !decoded) {
     return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });

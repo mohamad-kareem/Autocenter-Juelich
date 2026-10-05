@@ -9,6 +9,14 @@ export async function getAdminUser() {
   return user?.role === "admin" ? user : null;
 }
 
+/** Returns any logged-in staff member (admin or Mitarbeiter), or null. */
+export async function getStaffUser() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+  const user = token ? await verifyToken(token) : null;
+  return user?.userId ? user : null;
+}
+
 /** Mongo document -> plain JSON for the client. */
 export function serializeMessage(doc) {
   if (!doc) return null;

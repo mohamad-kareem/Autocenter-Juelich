@@ -53,17 +53,19 @@ export default async function DashboardPage() {
     tone: "violet",
   };
 
+  const messagesTile = {
+    label: "Neue Anfragen",
+    value: messages?.unread ?? 0,
+    hint: `${messages?.open ?? 0} offen`,
+    alert: (messages?.unread ?? 0) > 0,
+    href: "/dashboard/anfragen",
+    icon: Mail,
+    tone: "blue",
+  };
+
   const stats = isAdmin
     ? [
-        {
-          label: "Neue Anfragen",
-          value: messages?.unread ?? 0,
-          hint: `${messages?.open ?? 0} offen`,
-          alert: (messages?.unread ?? 0) > 0,
-          href: "/dashboard/anfragen",
-          icon: Mail,
-          tone: "blue",
-        },
+        messagesTile,
         tasksTile,
         {
           label: "Fahrzeuge online",
@@ -85,6 +87,7 @@ export default async function DashboardPage() {
         },
       ]
     : [
+        messagesTile,
         tasksTile,
         {
           label: "Diese Woche",
@@ -115,7 +118,7 @@ export default async function DashboardPage() {
         <p className="text-[12px] text-muted">{today}</p>
       </div>
 
-      <div className={cx("card grid divide-line overflow-hidden", isAdmin ? "grid-cols-2 lg:grid-cols-4 lg:divide-x" : "grid-cols-1 divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0")}>
+      <div className={cx("card grid divide-line overflow-hidden", "grid-cols-2 lg:grid-cols-4 lg:divide-x")}>
         {stats.map(({ icon: Icon, ...s }, i) => {
           const tone = TONES[s.tone] || TONES.blue;
           const isZero = s.value === 0;
@@ -126,8 +129,8 @@ export default async function DashboardPage() {
               title={s.title || undefined}
               className={cx(
                 "group relative flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-canvas/60",
-                isAdmin && i % 2 === 1 && "border-l border-line lg:border-l-0",
-                isAdmin && i > 1 && "border-t border-line lg:border-t-0",
+                i % 2 === 1 && "border-l border-line lg:border-l-0",
+                i > 1 && "border-t border-line lg:border-t-0",
               )}
             >
               <span className={cx("absolute inset-y-3 left-0 w-[3px] rounded-r-full", tone.bar)} aria-hidden />
@@ -175,7 +178,7 @@ export default async function DashboardPage() {
         <WeekTasks />
       </div>
 
-      {isAdmin ? (
+      {messages ? (
         <section className="card p-5">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-ink">Letzte Anfragen</h2>

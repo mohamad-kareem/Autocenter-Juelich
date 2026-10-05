@@ -14,7 +14,6 @@ export default async function AnfragenPage() {
   const user = token ? await verifyToken(token) : null;
 
   if (!user) redirect("/login");
-  if (user.role !== "admin") redirect("/dashboard");
 
-  return <AnfragenClient />;
+  return <AnfragenClient canDelete={user.role === "admin"} />;
 }

@@ -255,21 +255,21 @@ export default function ZeiterfassungClient() {
     setCurrentPage((prev) => Math.min(totalPages, prev + 1));
   }
 
-  const selectCls = "field h-10 py-0 text-sm";
+  const selectCls = "field";
 
   function Modal({ title, onClose, onSubmit, children }) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/60 p-4" onClick={onClose}>
-        <div className="card animate-pop-in w-full max-w-md p-6 shadow-float" onClick={(e) => e.stopPropagation()}>
-          <h3 className="text-xl font-bold">{title}</h3>
-          <form onSubmit={onSubmit} className="mt-5 space-y-4">
+        <div className="card animate-pop-in w-full max-w-sm p-5 shadow-float" onClick={(e) => e.stopPropagation()}>
+          <h3 className="text-base font-semibold text-ink">{title}</h3>
+          <form onSubmit={onSubmit} className="mt-4 space-y-3">
             {children}
-            <div className="flex gap-2 pt-2">
-              <button type="submit" className="btn btn-primary flex-1">
-                Speichern
-              </button>
-              <button type="button" onClick={onClose} className="btn btn-secondary flex-1">
+            <div className="flex justify-end gap-2 border-t border-line pt-3">
+              <button type="button" onClick={onClose} className="btn btn-secondary btn-sm">
                 Abbrechen
+              </button>
+              <button type="submit" className="btn btn-primary btn-sm">
+                Speichern
               </button>
             </div>
           </form>
@@ -290,7 +290,7 @@ export default function ZeiterfassungClient() {
             key={v}
             type="button"
             onClick={() => setValue(v)}
-            className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+            className={`rounded-md border px-3 py-1.5 text-[12px] font-semibold transition ${
               value === v
                 ? v === "in"
                   ? "border-emerald-500 bg-emerald-50 text-emerald-700"
@@ -323,19 +323,19 @@ export default function ZeiterfassungClient() {
               type="month"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
-              className="field h-10 w-44 py-0 text-sm"
+              className="field h-7 w-40 py-0 text-[12px]"
             />
           </div>
           <button
             type="button"
             onClick={() => setShowSummary((prev) => !prev)}
-            className={`btn h-10 py-0 text-sm ${showSummary ? "bg-navy-900 text-white hover:bg-navy-800" : "btn-secondary"}`}
+            className={`btn btn-sm ${showSummary ? "bg-ink text-white hover:bg-navy-800" : "btn-secondary"}`}
           >
-            <BarChart3 className="h-4 w-4" />
+            <BarChart3 className="h-3.5 w-3.5" />
             Monatsübersicht
           </button>
-          <button type="button" onClick={openAddModal} className="btn btn-primary h-10 py-0 text-sm">
-            <Plus className="h-4 w-4" />
+          <button type="button" onClick={openAddModal} className="btn btn-primary btn-sm">
+            <Plus className="h-3.5 w-3.5" />
             Stempel hinzufügen
           </button>
         </div>
@@ -417,7 +417,7 @@ export default function ZeiterfassungClient() {
                         <button
                           type="button"
                           onClick={() => openEdit(record)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-3 py-1.5 text-xs font-medium text-body transition hover:border-brand-500 hover:text-brand-700"
+                          className="inline-flex items-center gap-1 rounded-md border border-line-strong px-2 py-1 text-[11px] font-medium text-body transition hover:border-brand-500 hover:text-brand-700"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                           Bearbeiten
@@ -425,7 +425,7 @@ export default function ZeiterfassungClient() {
                         <button
                           type="button"
                           onClick={() => handleDelete(record._id)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-50"
+                          className="inline-flex items-center gap-1 rounded-md border border-rose-200 px-2 py-1 text-[11px] font-medium text-rose-700 transition hover:bg-rose-50"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                           Löschen

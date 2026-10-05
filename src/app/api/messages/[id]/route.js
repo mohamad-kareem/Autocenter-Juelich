@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 import mongoose from "mongoose";
 import dbConnect from "@/lib/mongodb";
 import ContactMessage, { MESSAGE_STATUS } from "@/app/models/ContactMessage";
-import { getAdminUser, serializeMessage } from "@/lib/messages";
+import { getAdminUser, getStaffUser, serializeMessage } from "@/lib/messages";
 
 function isValidId(id) {
   return mongoose.Types.ObjectId.isValid(String(id || ""));
@@ -11,7 +11,7 @@ function isValidId(id) {
 
 /** PATCH /api/messages/:id  { status?, read?, note? } */
 export async function PATCH(req, { params }) {
-  const admin = await getAdminUser();
+  const admin = await getStaffUser();
   if (!admin) return Response.json({ error: "Nicht berechtigt." }, { status: 401 });
 
   const { id } = await params;
@@ -55,7 +55,7 @@ export async function PATCH(req, { params }) {
 /** DELETE /api/messages/:id */
 export async function DELETE(req, { params }) {
   const admin = await getAdminUser();
-  if (!admin) return Response.json({ error: "Nicht berechtigt." }, { status: 401 });
+  if (!admin) return Response.json({ error: "Nur Administratoren können Anfragen löschen." }, { status: 403 });
 
   const { id } = await params;
   if (!isValidId(id)) return Response.json({ error: "Ungültige ID." }, { status: 400 });

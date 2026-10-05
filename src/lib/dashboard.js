@@ -181,7 +181,7 @@ async function getCarCount() {
 /** Everything the dashboard overview needs, in one call. */
 export async function getDashboardData({ userId, isAdmin }) {
   const [messages, week, tasks, cars] = await Promise.all([
-    isAdmin ? getMessageStats() : Promise.resolve(null),
+    getMessageStats(),
     getWeekTime({ userId, isAdmin }),
     getTaskStats(),
     isAdmin ? getCarCount() : Promise.resolve(null),

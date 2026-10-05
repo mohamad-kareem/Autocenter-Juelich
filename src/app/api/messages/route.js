@@ -2,13 +2,13 @@ export const runtime = "nodejs";
 
 import dbConnect from "@/lib/mongodb";
 import ContactMessage, { MESSAGE_STATUS } from "@/app/models/ContactMessage";
-import { getAdminUser, serializeMessage } from "@/lib/messages";
+import { getStaffUser, serializeMessage } from "@/lib/messages";
 
 const PAGE_SIZE = 25;
 
 /** GET /api/messages?status=new&q=müller&skip=0 */
 export async function GET(req) {
-  const admin = await getAdminUser();
+  const admin = await getStaffUser();
   if (!admin) {
     return Response.json({ error: "Nicht berechtigt." }, { status: 401 });
   }

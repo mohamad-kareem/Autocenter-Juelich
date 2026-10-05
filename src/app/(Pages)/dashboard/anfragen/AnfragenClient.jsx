@@ -80,7 +80,7 @@ function relativeTime(value) {
   return new Date(value).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-export default function AnfragenClient() {
+export default function AnfragenClient({ canDelete = false }) {
   const [tab, setTab] = useState("new");
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -229,13 +229,13 @@ export default function AnfragenClient() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Name, E-Mail, Text …"
               aria-label="Anfragen durchsuchen"
-              className="field h-9 w-full pl-8 text-[13px] sm:w-64"
+              className="field w-full pl-8 sm:w-64"
             />
           </div>
           <button
             type="button"
             onClick={() => load()}
-            className="btn btn-secondary h-9 px-2.5"
+            className="btn btn-secondary px-2.5"
             title="Aktualisieren"
             aria-label="Aktualisieren"
           >
@@ -526,15 +526,17 @@ export default function AnfragenClient() {
                   </button>
                 ) : null}
 
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => remove(selected._id)}
-                  className="btn btn-sm ml-auto border border-rose-200 text-rose-700 hover:bg-rose-50"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Löschen
-                </button>
+                {canDelete ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => remove(selected._id)}
+                    className="btn btn-sm ml-auto border border-rose-200 text-rose-700 hover:bg-rose-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Löschen
+                  </button>
+                ) : null}
               </div>
             </div>
           )}

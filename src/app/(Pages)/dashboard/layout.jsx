@@ -25,7 +25,7 @@ export default async function DashboardLayout({ children }) {
   const token = cookieStore.get("token")?.value;
   const user = token ? await verifyToken(token) : null;
   const role = user?.role === "admin" ? "admin" : "user";
-  const unread = role === "admin" ? await countUnread() : 0;
+  const unread = user ? await countUnread() : 0;
 
   return (
     <div className="min-h-screen bg-canvas">

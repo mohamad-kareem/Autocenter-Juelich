@@ -30,7 +30,7 @@ const GROUPS = [
   {
     title: "Kunden",
     items: [
-      { label: "Anfragen", href: "/dashboard/anfragen", icon: Inbox, color: "text-emerald-600", roles: ["admin"], badgeKey: "unread" },
+      { label: "Anfragen", href: "/dashboard/anfragen", icon: Inbox, color: "text-emerald-600", roles: ["user", "admin"], badgeKey: "unread" },
       { label: "Wochenplan", href: "/dashboard/wochenplan", icon: CalendarCheck, color: "text-violet-600", roles: ["user", "admin"] },
     ],
   },
@@ -102,8 +102,11 @@ export default function DashboardNav({ role = "user", badges = {}, user }) {
       {/* Brand row – same height as the top bar so both hairlines line up */}
       <div className={cx("flex h-14 shrink-0 items-center border-b border-line", mini ? "justify-center" : "gap-2 pl-4 pr-2")}>
         {!mini ? (
-          <Link href="/dashboard" className="min-w-0 truncate font-display text-[19px] leading-none text-ink">
-            Autocenter Jülich
+          <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-ink text-[11px] font-bold tracking-wide text-white">
+              AC
+            </span>
+            <span className="truncate text-[14px] font-semibold tracking-[-0.01em] text-ink">Autocenter Jülich</span>
           </Link>
         ) : null}
         <button
